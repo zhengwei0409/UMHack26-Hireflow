@@ -1,0 +1,80 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String
+  name      String
+  role      Role     @default(HR)
+  createdAt DateTime @default(now())
+}
+
+model Job {
+  id           String      @id @default(uuid())
+  title        String
+  department   String
+  description  String
+  requirements Json     @default("[]")
+  location     String
+  status       JobStatus   @default(OPEN)
+  createdAt    DateTime    @default(now())
+  candidates   Candidate[]
+}
+
+model Candidate {
+  id          String          @id @default(uuid())
+  fullName    String
+  email       String
+  phone       String?
+  cvFilePath  String
+  jobId       String
+  job         Job             @relation(fields: [jobId], references: [id])
+  status      CandidateStatus @default(APPLIED)
+  glmAnalysis Json?
+  glmScore    Int?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+  history     StatusHistory[]
+}
+
+model StatusHistory {
+  id          String    @id @default(uuid())
+  candidateId String
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+  fromStatus  String?
+  toStatus    String
+  event       String
+  triggeredBy String?
+  metadata    Json?
+  createdAt   DateTime  @default(now())
+}
+
+enum Role {
+  HR
+  ADMIN
+}
+
+enum JobStatus {
+  OPEN
+  CLOSED
+}
+
+enum CandidateStatus {
+  APPLIED
+  CV_PARSING
+  CV_PARSE_FAILED
+  CV_UNDER_REVIEW
+  CV_REJECTED
+  INTERVIEW_PENDING
+  INTERVIEW_SCHEDULED
+  INTERVIEW_INVITE_FAILED
+  INTERVIEW_DONE
+  INTERVIEW_REJECTED
+  OFFER_GENERATING
+  OFFER_SENT
+  ONBOARDING
+  HIRED
+  FAILED
+}

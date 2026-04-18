@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+
+# Environment variables (NEVER commit these)
+.env
+backend/.env
+
+# Build output
+dist/
+build/
+
+# Prisma generated client
+backend/node_modules/
+
+# File uploads (local only)
+backend/uploads/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
