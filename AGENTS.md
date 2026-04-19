@@ -79,7 +79,7 @@ Workflow:
 - Check `docs/backend.md` for backend API documentation
 - Check `docs/learning-log.md` for concepts already explained
 
-## Documentation Rules (IMPORTANT)
+<!-- ## Documentation Rules (IMPORTANT)
 When doing anything significant, you MUST:
 
 1. **Update `docs/learning-log.md`** — explain the concept behind what was just built.
@@ -90,4 +90,4 @@ When doing anything significant, you MUST:
 
 2. **Update `docs/workflow-states.md`** — only if the state machine design changes.
 
-**Rule of thumb**: If a junior dev joining the team tomorrow couldn't understand what was built and why, the docs are incomplete.
+**Rule of thumb**: If a junior dev joining the team tomorrow couldn't understand what was built and why, the docs are incomplete. -->
