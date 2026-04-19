@@ -10,7 +10,7 @@
 
 | # | Module | Status | Priority | 说明 |
 |---|---|---|---|---|
-| 1 | [Auth](#module-1-auth) | ⬜ | P0 | HR 登录 |
+| 1 | [Auth](#module-1-auth) | ✅ | P0 | HR 登录 |
 | 2 | [Jobs](#module-2-jobs) | ⬜ | P0 | Job posting CRUD |
 | 3 | [Candidates](#module-3-candidates) | ⬜ | P0 | CV 上传、候选人列表 |
 | 4 | [Workflow](#module-4-workflow) | ⬜ | P0 | HR Accept/Reject 操作 |
@@ -66,8 +66,40 @@ Authorization: Bearer <JWT_TOKEN>   (除了 login 和 candidate 上传 CV)
 
 > HR 登录系统。Candidate 不需要登录 (他们通过 public link 上传 CV)。
 
+### `POST /auth/register`
+注册新 HR 账号。
+
+**Request**:
+```json
+{
+  "email": "hr@company.com",
+  "password": "password123",
+  "name": "Jane HR"
+}
+```
+
+**Response (201)**:
+```json
+{
+  "success": true,
+  "data": {
+    "token": "eyJhbGc...",
+    "user": {
+      "id": "uuid",
+      "email": "hr@company.com",
+      "name": "Jane HR",
+      "role": "HR"
+    }
+  }
+}
+```
+
+**Errors**: `409 EMAIL_TAKEN`, `400 VALIDATION_ERROR`
+
+---
+
 ### `POST /auth/login`
-HR 登录。
+HR 用 email + password 登录。
 
 **Request**:
 ```json
@@ -93,10 +125,58 @@ HR 登录。
 }
 ```
 
-### `GET /auth/me`
-获取当前登录的 HR 资料。
+**Errors**: `401 INVALID_CREDENTIALS`, `400 VALIDATION_ERROR`
 
-**Response (200)**: 同上的 `user` object。
+---
+
+### `GET /auth/google`
+发起 Google OAuth 登录。**Public**。
+
+前端直接跳转到这个 URL：
+```
+http://localhost:3000/api/v1/auth/google
+```
+
+会自动 redirect 到 Google 登录页，不需要 request body。
+
+---
+
+### `GET /auth/google/callback`
+Google OAuth callback。**由 Google 自动调用，前端不需要直接 call**。
+
+登录成功后 redirect 到：
+```
+http://localhost:5173/auth/callback?token=eyJhbGc...
+```
+
+前端在 `/auth/callback` 页面读取 token：
+```js
+const token = new URLSearchParams(window.location.search).get('token');
+```
+
+逻辑：用 Google 返回的 email 查数据库，有就直接登录，没有就自动创建新 HR 账号（`password` 为空）。
+
+**Errors**: `400 MISSING_CODE`, `500 GOOGLE_AUTH_FAILED`
+
+---
+
+### `GET /auth/me`
+获取当前登录的 HR 资料。需要 JWT。
+
+**Response (200)**:
+```json
+{
+  "success": true,
+  "data": {
+    "id": "uuid",
+    "email": "hr@company.com",
+    "name": "Jane HR",
+    "role": "HR"
+  }
+}
+```
+
+**Errors**: `401 UNAUTHORIZED`, `404 USER_NOT_FOUND`
 
 ---
 
