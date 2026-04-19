@@ -11,7 +11,7 @@
 | # | Module | Status | Priority | 说明 |
 |---|---|---|---|---|
 | 1 | [Auth](#module-1-auth) | ✅ | P0 | HR 登录 |
-| 2 | [Jobs](#module-2-jobs) | ⬜ | P0 | Job posting CRUD |
+| 2 | [Jobs](#module-2-jobs) | ✅ | P0 | Job posting CRUD |
 | 3 | [Candidates](#module-3-candidates) | ⬜ | P0 | CV 上传、候选人列表 |
 | 4 | [Workflow](#module-4-workflow) | ⬜ | P0 | HR Accept/Reject 操作 |
 | 5 | [GLM Integration](#module-5-glm-integration) | ⬜ | P0 | 触发 AI 分析 (internal) |
