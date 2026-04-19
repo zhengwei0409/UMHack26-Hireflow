@@ -1,0 +1,380 @@
+:root {
+  color-scheme: light;
+  font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  background-color: #f2f3f5;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  margin: 0;
+  background: #f2f3f5;
+  color: #1f2937;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.page-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+.topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 1.1rem 2rem;
+  background: #ffffff;
+  border-bottom: 1px solid #e5e7eb;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.brand,
+.brand-footer {
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.nav-links {
+  display: flex;
+  gap: 1.75rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.nav-links a {
+  color: #374151;
+  font-size: 0.95rem;
+}
+
+.top-actions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.login-link {
+  background: none;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.top-cta {
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  padding: 0.8rem 1.25rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.content-area {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 3.5rem 2.5rem;
+}
+
+.signup-card {
+  width: min(480px, 100%);
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 28px;
+  padding: 2.5rem;
+  box-shadow: 0 20px 60px rgba(15, 23, 42, 0.08);
+}
+
+.card-header {
+  text-align: center;
+}
+
+.card-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  line-height: 1.1;
+  letter-spacing: -0.02em;
+}
+
+.card-header p {
+  margin: 0.75rem 0 2rem;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.signup-form {
+  display: grid;
+  gap: 1rem;
+}
+
+.signup-form label {
+  display: grid;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #4b5563;
+}
+
+.signup-form input[type='text'],
+.signup-form input[type='email'],
+.signup-form input[type='password'] {
+  width: 100%;
+  min-height: 3.25rem;
+  border: 1px solid #d1d5db;
+  border-radius: 0.75rem;
+  padding: 0 1rem;
+  font-size: 1rem;
+  color: #111827;
+  background: #f9fafb;
+}
+
+.signup-form input::placeholder {
+  color: #9ca3af;
+}
+
+.password-hint {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.form-alert {
+  border-radius: 0.75rem;
+  padding: 1rem 1rem;
+  margin-bottom: 1rem;
+  font-size: 0.94rem;
+}
+
+.form-alert.error {
+  background: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.form-alert.success {
+  background: #d1fae5;
+  color: #065f46;
+  border: 1px solid #6ee7b7;
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.login-options .checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  font-size: 0.9rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.login-options .checkbox-label input[type='checkbox'] {
+  width: 1rem;
+  height: 1rem;
+  cursor: pointer;
+}
+
+.forgot-password-link {
+  background: none;
+  border: none;
+  color: #09090a;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.forgot-password-link:hover {
+  color: #0056b3;
+}
+
+.checkbox-field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #374151;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  flex-wrap: nowrap;
+  overflow-wrap: normal;
+}
+
+.checkbox-field a {
+  white-space: nowrap;
+}
+
+.checkbox-field input {
+  width: 1rem;
+  height: 1rem;
+}
+
+.checkbox-field a {
+  color: #111827;
+  text-decoration: underline;
+}
+
+.agreement-section {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.agreement-text {
+  display: flex;
+  align-items: center;
+  color: #374151;
+  font-size: 0.86rem;
+  margin: 0;
+  padding: 0;
+  white-space: nowrap;
+  line-height: 1.4;
+  
+}
+
+.agreement-text a {
+  color: #111827;
+  text-decoration: underline;
+  display: inline;
+  white-space: nowrap;
+}
+
+.primary-button,
+.secondary-button {
+  width: 100%;
+  min-height: 3.5rem;
+  border-radius: 0.75rem;
+  border: none;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.primary-button {
+  background: #111827;
+  color: #ffffff;
+}
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  color: #6b7280;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin: 0.25rem 0;
+}
+
+.divider::before,
+.divider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: #e5e7eb;
+}
+
+.secondary-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  background: #ffffff;
+  color: #111827;
+  border: 1px solid #d1d5db;
+}
+
+.google-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 999px;
+  background: #f3f4f6;
+  color: #111827;
+  font-size: 0.85rem;
+}
+
+.footer-text {
+  margin-top: 1.75rem;
+  text-align: center;
+  color: #6b7280;
+  font-size: 0.95rem;
+}
+
+.footer-text a {
+  color: #111827;
+  font-weight: 600;
+}
+
+.page-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1.5rem 2rem;
+  background: #ffffff;
+  border-top: 1px solid #e5e7eb;
+}
+
+.footer-left,
+.footer-links {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.footer-left span,
+.footer-links a {
+  color: #6b7280;
+  font-size: 0.9rem;
+}
+
+.footer-links a {
+  color: #374151;
+}
+
+@media (max-width: 640px) {
+  .topbar,
+  .page-footer {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+
+  .nav-links {
+    display: none;
+  }
+
+  .signup-card {
+    padding: 2rem;
+  }
+}

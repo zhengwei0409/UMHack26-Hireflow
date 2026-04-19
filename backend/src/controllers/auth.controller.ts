@@ -113,3 +113,28 @@ export async function me(req: Request, res: Response) {
     });
   }
 }
+
+export async function forgotPassword(req: Request, res: Response) {
+  const { email } = req.body;
+
+  if (!email) {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'Email is required' },
+    });
+  }
+
+  try {
+    await authService.forgotPassword(email);
+    // Always return success for security (don't reveal if email exists)
+    return res.status(200).json({
+      success: true,
+      data: { message: 'If an account exists with this email, a reset link will be sent.' },
+    });
+  } catch {
+    return res.status(500).json({
+      success: false,
+      error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' },
+    });
+  }
+}
