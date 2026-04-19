@@ -68,52 +68,74 @@ UMHack26/
 ### Prerequisites
 
 - Node.js v18+
-- PostgreSQL installed and running
 - Git
 
-### Backend Setup
+---
 
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Fill in DATABASE_URL in .env:
-# DATABASE_URL="postgresql://postgres:yourpassword@localhost:5432/umhack_hr"
+### Step 1: Install PostgreSQL
 
-# Create the database
-createdb umhack_hr
+**Windows** — Download and install from https://www.postgresql.org/download/windows/
 
-# Run migrations (creates all tables)
-npx prisma migrate dev --name init
+During install, set a password for the `postgres` user (remember it).
 
-# Start dev server
-npm run dev
-# → Server running on http://localhost:3000
-# → Test: curl http://localhost:3000/health
-```
-
-### Frontend Setup
-
-```bash
-cd frontend
-npm install
-npm run dev
-# → App running on http://localhost:5173
+After install, open pgAdmin or psql and create the database:
+```sql
+CREATE DATABASE umhack_hr;
 ```
 
 ---
 
-## Environment Variables
+### Step 2: Configure .env
 
-Copy `backend/.env.example` to `backend/.env` and fill in:
+```bash
+cd backend
+cp .env.example .env
+```
 
-| Variable | Description |
+Fill in these values in `backend/.env`:
+
+| Variable | Value |
 |---|---|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `JWT_SECRET` | Any random string (e.g. run `openssl rand -hex 32`) |
-| `GLM_API_KEY` | Z.AI GLM API key (get from PM) |
-| `RESEND_API_KEY` | Email API key (optional for now) |
-| `PORT` | Backend port (default: 3000) |
+| `DATABASE_URL` | `postgresql://postgres:<your-password>@localhost:5432/umhack_hr` |
+| `JWT_SECRET` | Any random string |
+| `GOOGLE_CLIENT_ID` | See Google OAuth setup below |
+| `GOOGLE_CLIENT_SECRET` | See Google OAuth setup below |
+| `GLM_API_KEY` | Get from PM |
+
+`GOOGLE_REDIRECT_URI` is already set in `.env.example`, leave it as-is.
+
+**Google OAuth Setup** (everyone does this once):
+1. Go to https://console.cloud.google.com → create a new project
+2. Left menu → **APIs & Services** → **OAuth consent screen** → **Get started**
+   - User Type: **External**, fill in app name and your email
+3. Left menu → **Clients** → **Create OAuth client**
+   - Application type: **Web application**
+   - Authorized redirect URIs: `http://localhost:3000/api/v1/auth/google/callback`
+4. Copy the **Client ID** and **Client Secret** into `.env`
+
+---
+
+### Step 3: Install & Migrate
+
+```bash
+cd backend
+npm install
+npx prisma migrate dev
+```
+
+---
+
+### Step 4: Start
+
+```bash
+# Backend
+cd backend && npm run dev
+# → http://localhost:3000
+
+# Frontend
+cd frontend && npm run dev
+# → http://localhost:5173
+```
 
 ---
 
