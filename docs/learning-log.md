@@ -12,6 +12,7 @@
 3. [Prisma：ORM 是什么？为什么用它？](#3-prismaorm-是什么为什么用它)
 4. [State Machine：状态机是什么？](#4-state-machine状态机是什么)
 5. [API 设计：Conventions 为什么重要？](#5-api-设计conventions-为什么重要)
+6. [Auth Module：密码、JWT、Middleware 怎么运作？](#6-auth-module密码jwt-middleware-怎么运作)
 
 ---
 
@@ -389,5 +390,121 @@ export type State = (typeof STATES)[keyof typeof STATES];
 | `.js` 文件 | `.ts` 文件 |
 
 `import/export` 是 ES Module 标准语法，更现代，更清晰，TypeScript 默认用这个。
+
+---
+
+## 6. Auth Module：密码、JWT、Middleware 怎么运作？
+
+### 大图景
+
+HR 登录系统的完整流程涉及三个安全概念：**密码哈希**、**JWT token**、**Middleware 拦截**。
+
+```
+Login 请求
+    ↓
+POST /auth/login { email, password }
+    ↓
+auth.controller.ts  ← 读 req，检查格式
+    ↓
+auth.service.ts     ← 验证密码，生成 JWT
+    ↓
+返回 token 给 frontend
+
+之后每个需要登录的 request：
+    ↓
+Authorization: Bearer <token>
+    ↓
+auth.middleware.ts  ← 验证 token，把 userId 塞进 req
+    ↓
+controller 直接用 req.userId
+```
+
+---
+
+### 密码哈希：为什么不能存明文密码？
+
+数据库被黑了？如果你存的是明文 `password123`，黑客直接拿去用。
+
+**bcryptjs** 把密码变成一串看不懂的字符：
+
+```
+"password123"  →  "$2a$10$XgPYf8q3Kx..." (60 个字符的哈希值)
+```
+
+这个过程是**单向的**：你没法从哈希值反推回原密码。验证时，bcrypt 把用户输入的密码再哈希一次，比较两个哈希值是否一样。
+
+```ts
+// 存入数据库前：
+const hashed = await bcrypt.hash("password123", 10); // 10 = cost factor (越高越慢，越安全)
+
+// 验证时：
+const isMatch = await bcrypt.compare("password123", hashed); // true
+```
+
+`cost factor = 10` 意味着哈希计算需要约 100ms — 对用户无感，但黑客暴力破解要慢 2^10 倍。
+
+---
+
+### JWT：什么是 JSON Web Token？
+
+JWT 是一串加密字符串，格式是三段 Base64 用点连起来：
+
+```
+eyJhbGciOiJIUzI1NiJ9.eyJ1c2VySWQiOiJhYmMiLCJyb2xlIjoiSFIifQ.SflKxw...
+      ↑ Header                  ↑ Payload (数据)              ↑ Signature (签名)
+```
+
+**Payload** 里藏着你放进去的数据（明文，只是 Base64 编码，不是加密）：
+```json
+{ "userId": "abc-123", "role": "HR", "iat": 1234567890, "exp": 1234596490 }
+```
+
+**Signature** 是用你的 `JWT_SECRET` 签名的。没有这个 secret，任何人改了 payload，signature 就失效了。
+
+关键点：**JWT 不存在数据库里**。每次收到 request，backend 只需验证 signature 是否合法，就能信任 payload 里的数据。
+
+```ts
+// 生成 token（login 时）
+const token = jwt.sign({ userId: user.id, role: user.role }, JWT_SECRET, { expiresIn: '8h' });
+
+// 验证 token（每次 request）
+const decoded = jwt.verify(token, JWT_SECRET); // 失败会 throw error
+```
+
+---
+
+### Middleware：请求的拦截器
+
+Middleware 就是在 request 到达 controller 之前执行的函数。
+
+```
+request → [middleware 1] → [middleware 2] → controller → response
+```
+
+`requireAuth` middleware 做三件事：
+1. 从 `Authorization` header 拿出 token
+2. 验证 token 是否合法
+3. 把 `userId` 塞进 `req`，让后续的 controller 直接用
+
+```ts
+// 用法：哪个 route 需要登录，就加 requireAuth
+router.get('/me', requireAuth, authController.me);
+//                  ↑ 这个 middleware 先跑，通过了才到 controller
+```
+
+如果没有 token 或 token 过期，middleware 直接返回 `401 Unauthorized`，controller 根本不会被执行。
+
+---
+
+### 建了哪些文件
+
+| 文件 | 作用 |
+|---|---|
+| `src/services/auth.service.ts` | 业务逻辑：验证密码、生成 JWT、查 user |
+| `src/controllers/auth.controller.ts` | 处理 HTTP：读 req body，call service，写 res |
+| `src/routes/auth.routes.ts` | 注册 URL：`POST /login`、`GET /me` |
+| `src/middleware/auth.middleware.ts` | 保护 route：验证 JWT，提取 userId |
+| `src/config/prisma.ts` | Prisma client 的 singleton |
+| `prisma/seed.ts` | 建测试 HR 账号（`npm run seed`） |
 
 ---
