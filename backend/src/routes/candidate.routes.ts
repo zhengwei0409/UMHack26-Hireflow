@@ -3,6 +3,7 @@ import multer from 'multer';
 import path from 'path';
 import { requireAuth } from '../middleware/auth.middleware';
 import * as candidateController from '../controllers/candidate.controller';
+import * as workflowController from '../controllers/workflow.controller';
 
 const storage = multer.diskStorage({
   destination: 'uploads/cv/',
@@ -34,5 +35,14 @@ router.post('/apply', upload.single('cvFile'), candidateController.applyToJob);
 router.get('/', requireAuth, candidateController.listCandidates);
 router.get('/:id', requireAuth, candidateController.getCandidate);
 router.get('/:id/cv', requireAuth, candidateController.downloadCv);
+router.get('/:id/history', requireAuth, workflowController.getHistory);
+
+// Workflow actions
+router.post('/:id/actions/accept-cv', requireAuth, workflowController.acceptCv);
+router.post('/:id/actions/reject-cv', requireAuth, workflowController.rejectCv);
+router.post('/:id/actions/mark-interview-done', requireAuth, workflowController.markInterviewDone);
+router.post('/:id/actions/accept-interview', requireAuth, workflowController.acceptInterview);
+router.post('/:id/actions/reject-interview', requireAuth, workflowController.rejectInterview);
+router.post('/:id/actions/retry', requireAuth, workflowController.retry);
 
 export default router;
