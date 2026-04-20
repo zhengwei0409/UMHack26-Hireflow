@@ -89,3 +89,20 @@ export async function registerUser(email: string, password: string, name: string
     user: { id: user.id, email: user.email, name: user.name, role: user.role },
   };
 }
+
+export async function forgotPassword(email: string) {
+  // Check if user exists but don't reveal the status for security
+  const user = await prisma.user.findUnique({ where: { email } });
+
+  if (user) {
+    // In a real app, you would:
+    // 1. Generate a reset token
+    // 2. Save it to database with expiry
+    // 3. Send email with reset link
+    // For now, we just log that the reset was requested
+    console.log(`Password reset requested for user: ${email}`);
+  }
+
+  // Always return success for security (don't reveal if email exists)
+  return { success: true };
+}
