@@ -72,7 +72,7 @@ Workflow:
 4. Workflow / Automation Engineer (1 people)
 5. Integrator / PM / QA (1 people)
 
-*My role is Backend Developer*
+<!-- *My role is Backend Developer* -->
 
 ## Context
 - Check `docs/workflow-states.md` for state diagram
