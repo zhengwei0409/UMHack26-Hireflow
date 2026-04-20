@@ -1,4 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import SharedLayout from './components/SharedLayout.jsx';
+import Dashboard from './pages/Dashboard.jsx';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
 const AUTH_URL = `${API_BASE}/api/v1/auth`;
@@ -21,6 +23,54 @@ const HRSignUp = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [user, setUser] = useState(null);
+  const [currentPage, setCurrentPage] = useState('dashboard');
+  const [initializing, setInitializing] = useState(true);
+
+  // Check for existing token and remember me data on app load
+  useEffect(() => {
+    const token = localStorage.getItem('hireflow_token');
+    const rememberEmail = localStorage.getItem('hireflow_remember_email');
+    const rememberName = localStorage.getItem('hireflow_remember_name');
+
+    // Pre-fill form with remember me data
+    if (rememberEmail) {
+      setFormData(prev => ({
+        ...prev,
+        email: rememberEmail,
+        fullName: rememberName || '',
+        rememberMe: true
+      }));
+      setMode('login'); // Switch to login mode if we have remember me data
+    }
+
+    // Validate existing token
+    if (token) {
+      fetch(`${AUTH_URL}/me`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      })
+        .then(async (response) => {
+          if (response.ok) {
+            const result = await response.json();
+            setUser(result.data);
+          } else {
+            // Token is invalid, remove it
+            localStorage.removeItem('hireflow_token');
+          }
+        })
+        .catch(() => {
+          // Network error or other issue, remove token
+          localStorage.removeItem('hireflow_token');
+        })
+        .finally(() => {
+          setInitializing(false);
+        });
+    } else {
+      setInitializing(false);
+    }
+  }, []);
+
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -120,7 +170,8 @@ const HRSignUp = () => {
       if (rememberMe && mode === 'login') {
         localStorage.setItem('hireflow_remember_email', email);
         localStorage.setItem('hireflow_remember_name', result.data.user.name || '');
-      } else {
+      } else if (!rememberMe) {
+        // Clear remember me data if unchecked
         localStorage.removeItem('hireflow_remember_email');
         localStorage.removeItem('hireflow_remember_name');
       }
@@ -143,8 +194,7 @@ const HRSignUp = () => {
 
   const handleLogout = () => {
     localStorage.removeItem('hireflow_token');
-    localStorage.removeItem('hireflow_remember_email');
-    localStorage.removeItem('hireflow_remember_name');
+    // Keep remember me data for future logins
     setUser(null);
     setFormData({
       fullName: '',
@@ -158,6 +208,47 @@ const HRSignUp = () => {
     });
     setSuccess('You have been logged out.');
   };
+
+  // Show loading while checking for existing session
+  if (initializing) {
+    return (
+      <div className="page-shell">
+        <main className="content-area">
+          <section className="signup-card">
+            <div className="card-header">
+              <h1>Loading HireFlow...</h1>
+              <p>Checking your session.</p>
+            </div>
+          </section>
+        </main>
+      </div>
+    );
+  }
+
+  if (user) {
+    return (
+      <SharedLayout
+        user={user}
+        activePage={currentPage}
+        onNavigate={setCurrentPage}
+        onLogout={handleLogout}
+      >
+        {currentPage === 'dashboard' ? (
+          <Dashboard />
+        ) : (
+          <section className="dashboard-page placeholder-page">
+            <div className="dashboard-header">
+              <div>
+                <p className="eyebrow">{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidates' : currentPage === 'workflow' ? 'Workflow' : 'Settings'}</p>
+                <h1>{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidate pipeline' : currentPage === 'workflow' ? 'Workflow overview' : 'Settings'} </h1>
+                <p className="dashboard-copy">This workspace page is part of the HireFlow shared layout and will reuse the header and sidebar across every screen.</p>
+              </div>
+            </div>
+          </section>
+        )}
+      </SharedLayout>
+    );
+  }
 
   // Forgot password modal
   if (showForgotPassword && !user) {
@@ -230,19 +321,26 @@ const HRSignUp = () => {
 
   if (user) {
     return (
-      <div className="page-shell">
-        <main className="content-area">
-          <section className="signup-card">
-            <div className="card-header">
-              <h1>Welcome, {user.name || user.email}!</h1>
-              <p>Your HireFlow session is live.</p>
+      <SharedLayout
+        user={user}
+        activePage={currentPage}
+        onNavigate={setCurrentPage}
+        onLogout={handleLogout}
+      >
+        {currentPage === 'dashboard' ? (
+          <Dashboard />
+        ) : (
+          <section className="dashboard-page placeholder-page">
+            <div className="dashboard-header">
+              <div>
+                <p className="eyebrow">{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidates' : currentPage === 'workflow' ? 'Workflow' : 'Settings'}</p>
+                <h1>{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidate pipeline' : currentPage === 'workflow' ? 'Workflow overview' : 'Settings'} </h1>
+                <p className="dashboard-copy">This workspace page is part of the HireFlow shared layout and will reuse the header and sidebar across every screen.</p>
+              </div>
             </div>
-            <button type="button" className="primary-button" onClick={handleLogout}>
-              Log Out
-            </button>
           </section>
-        </main>
-      </div>
+        )}
+      </SharedLayout>
     );
   }
 

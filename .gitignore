@@ -24,3 +24,5 @@ Thumbs.db
 npm-debug.log*
 
 .vscode
+
+temp_stitch_probe.py
