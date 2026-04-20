@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
+import '../styles/dashboard.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
 
-const Dashboard = () => {
+const Dashboard = ({ onCreateJob }) => {
   const [dashboard, setDashboard] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -48,7 +49,7 @@ const Dashboard = () => {
           <h1>AI Resume Screener</h1>
           <p className="dashboard-copy">Track active roles, review applicant progress, and surface top resumes for your hiring workflow.</p>
         </div>
-        <button className="primary-button">Create Job</button>
+        <button className="primary-button" type="button" onClick={onCreateJob}>Create Job</button>
       </section>
 
       {loading && (

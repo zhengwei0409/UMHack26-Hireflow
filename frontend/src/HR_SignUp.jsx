@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import SharedLayout from './components/SharedLayout.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import CreateJob from './pages/CreateJob.jsx';
+import './styles/signup.css';
 
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
 const AUTH_URL = `${API_BASE}/api/v1/auth`;
@@ -234,13 +236,15 @@ const HRSignUp = () => {
         onLogout={handleLogout}
       >
         {currentPage === 'dashboard' ? (
-          <Dashboard />
+          <Dashboard onCreateJob={() => setCurrentPage('positions')} />
+        ) : currentPage === 'positions' ? (
+          <CreateJob />
         ) : (
           <section className="dashboard-page placeholder-page">
             <div className="dashboard-header">
               <div>
-                <p className="eyebrow">{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidates' : currentPage === 'workflow' ? 'Workflow' : 'Settings'}</p>
-                <h1>{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidate pipeline' : currentPage === 'workflow' ? 'Workflow overview' : 'Settings'} </h1>
+                <p className="eyebrow">{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidates' : currentPage === 'shortlisted' ? 'Shortlisted' : 'Settings'}</p>
+                <h1>{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidate pipeline' : currentPage === 'shortlisted' ? 'Shortlisted candidates' : 'Settings'} </h1>
                 <p className="dashboard-copy">This workspace page is part of the HireFlow shared layout and will reuse the header and sidebar across every screen.</p>
               </div>
             </div>
