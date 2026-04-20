@@ -1,4 +1,5 @@
 import React from 'react';
+import '../styles/sharedlayout.css';
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard' },
