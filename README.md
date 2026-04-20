@@ -32,7 +32,7 @@ Without GLM, the system cannot screen CVs, generate offer letters, or coordinate
 |---|---|
 | Frontend | React + Vite |
 | Backend | Node.js + Express + TypeScript |
-| Database | PostgreSQL + Prisma ORM |
+| Database | PostgreSQL + Prisma ORM (Docker) |
 | AI | Z.AI GLM API |
 | Auth | JWT |
 | File Storage | Local (`uploads/`) |
@@ -67,25 +67,12 @@ UMHack26/
 
 ### Prerequisites
 
-- Node.js v18+
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) installed and running
 - Git
 
 ---
 
-### Step 1: Install PostgreSQL
-
-**Windows** — Download and install from https://www.postgresql.org/download/windows/
-
-During install, set a password for the `postgres` user (remember it).
-
-After install, open pgAdmin or psql and create the database:
-```sql
-CREATE DATABASE umhack_hr;
-```
-
----
-
-### Step 2: Configure .env
+### Step 1: Configure .env
 
 ```bash
 cd backend
@@ -96,13 +83,12 @@ Fill in these values in `backend/.env`:
 
 | Variable | Value |
 |---|---|
-| `DATABASE_URL` | `postgresql://postgres:<your-password>@localhost:5432/umhack_hr` |
 | `JWT_SECRET` | Any random string |
 | `GOOGLE_CLIENT_ID` | See Google OAuth setup below |
 | `GOOGLE_CLIENT_SECRET` | See Google OAuth setup below |
 | `GLM_API_KEY` | Get from PM |
 
-`GOOGLE_REDIRECT_URI` is already set in `.env.example`, leave it as-is.
+> `DATABASE_URL` is already handled by Docker — leave it as-is.
 
 **Google OAuth Setup** (everyone does this once):
 1. Go to https://console.cloud.google.com → create a new project
@@ -115,25 +101,26 @@ Fill in these values in `backend/.env`:
 
 ---
 
-### Step 3: Install & Migrate
+### Step 2: Start Backend (one command)
 
 ```bash
-cd backend
-npm install
-npx prisma migrate dev
+docker compose up --build
 ```
+
+- Backend → http://localhost:3000
+- PostgreSQL → localhost:5432 (auto-created, no manual setup needed)
+
+Database migrations run automatically on startup.
+
+To stop: `docker compose down`
+To wipe the database too: `docker compose down -v`
 
 ---
 
-### Step 4: Start
+### Step 3: Start Frontend
 
 ```bash
-# Backend
-cd backend && npm run dev
-# → http://localhost:3000
-
-# Frontend
-cd frontend && npm run dev
+cd frontend && npm install && npm run dev
 # → http://localhost:5173
 ```
 
