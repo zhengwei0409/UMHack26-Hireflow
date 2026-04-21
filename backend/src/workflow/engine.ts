@@ -13,8 +13,13 @@ const TRANSITIONS: Record<string, { from: State; to: State; event: string }> = {
     to: STATES.CV_REJECTED,
     event: 'HR_REJECT_CV',
   },
+  'schedule-interview': {
+    from: STATES.INTERVIEW_PENDING,
+    to: STATES.INTERVIEW_SCHEDULED,
+    event: 'HR_SCHEDULE_INTERVIEW',
+  },
   'mark-interview-done': {
-    from: STATES.INTERVIEW_SCHEDULED,
+    from: STATES.INTERVIEW_CONFIRMED,
     to: STATES.INTERVIEW_DONE,
     event: 'HR_MARK_INTERVIEW_DONE',
   },

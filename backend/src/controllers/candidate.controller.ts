@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import path from 'path';
 import * as candidateService from '../services/candidate.service';
+import * as automation from '../services/workflow-automation.service';
 
 export async function applyToJob(req: Request, res: Response) {
   const { jobId, fullName, email, phone } = req.body;
@@ -28,6 +29,10 @@ export async function applyToJob(req: Request, res: Response) {
       email,
       phone,
       cvFilePath: file.path,
+    });
+
+    automation.onCVUploaded(candidate.id).catch((err) => {
+      console.error('GLM analysis failed:', err.message);
     });
 
     return res.status(201).json({
@@ -90,6 +95,20 @@ export async function downloadCv(req: Request<{ id: string }>, res: Response) {
     }
     if (err.message === 'CV_FILE_NOT_FOUND') {
       return res.status(404).json({ success: false, error: { code: 'CV_FILE_NOT_FOUND', message: 'CV file not found on server' } });
+    }
+    return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
+  }
+}
+
+export async function deleteCandidate(req: Request<{ id: string }>, res: Response) {
+  const { id } = req.params;
+
+  try {
+    await candidateService.deleteCandidate(id);
+    return res.status(200).json({ success: true, data: { message: 'Candidate deleted' } });
+  } catch (err: any) {
+    if (err.message === 'CANDIDATE_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found' } });
     }
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }
