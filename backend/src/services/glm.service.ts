@@ -20,6 +20,16 @@ export interface OfferLetter {
   body: string;
 }
 
+export interface SpiderMapAspect {
+  aspect: string;
+  score: number;
+}
+
+export interface SpiderMapEvaluation {
+  aspects: SpiderMapAspect[];
+  summary: string;
+}
+
 interface GLMMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -164,4 +174,63 @@ async function extractTextFromDOCX(filePath: string): Promise<string> {
   const mammoth = (await import('mammoth')).default;
   const result = await mammoth.extractRawText({ path: filePath });
   return result.value;
+}
+
+export async function generateSpiderMap(cvFilePath: string, jobDescription: string): Promise<SpiderMapEvaluation> {
+  let cvText: string;
+
+  const ext = path.extname(cvFilePath).toLowerCase();
+  if (ext === '.pdf') {
+    cvText = await extractTextFromPDF(cvFilePath);
+  } else if (ext === '.docx') {
+    cvText = await extractTextFromDOCX(cvFilePath);
+  } else {
+    cvText = fs.readFileSync(cvFilePath, 'utf-8');
+  }
+
+  const prompt = `You are an HR analyst evaluating a candidate's CV for a job using a spider map (radar chart).
+Job Description:
+${jobDescription}
+
+Candidate CV:
+${cvText}
+
+Determine the most relevant evaluation aspects based on the job requirements. Common aspects include: Technical Skills, Experience, Education, Communication, Problem Solving, Leadership, Domain Knowledge, Creativity, Teamwork, Adaptability.
+
+Generate exactly 5-8 aspects that are most relevant to this specific job. For each aspect, provide a score from 0-100 based on how well the candidate's CV demonstrates that skill.
+
+Return a JSON object with exactly this structure:
+{
+  "aspects": [
+    { "aspect": "string", "score": number },
+    ...
+  ],
+  "summary": "A brief overall evaluation summary (1-2 sentences)"
+}
+
+Only return the JSON, no other text.`;
+
+  try {
+    const response = await callLLM([{ role: 'user', content: prompt }], 0.3);
+    const parsed = extractJsonFromResponse(response);
+
+    if (parsed && Array.isArray(parsed.aspects)) {
+      const aspects = parsed.aspects
+        .filter((a: any) => a.aspect && typeof a.score === 'number')
+        .map((a: any) => ({
+          aspect: a.aspect,
+          score: Math.min(100, Math.max(0, Math.round(a.score))),
+        }));
+
+      return {
+        aspects,
+        summary: parsed.summary || '',
+      };
+    }
+
+    throw new Error('Invalid LLM response format');
+  } catch (error) {
+    console.error('LLM generateSpiderMap error:', error);
+    throw new Error('SPIDER_MAP_GENERATION_FAILED');
+  }
 }

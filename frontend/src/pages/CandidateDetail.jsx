@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { Radar, RadarChart, PolarGrid, PolarAngleAxis, ResponsiveContainer } from 'recharts';
 import api from '../services/api';
 
 const STATUS_ACTIONS = {
@@ -129,6 +130,7 @@ const CandidateDetail = () => {
 
   const actions = STATUS_ACTIONS[candidate.status] || [];
   const glmAnalysis = candidate.glmAnalysis;
+  const spiderMapEvaluation = candidate.spiderMapEvaluation;
 
   return (
     <div className="candidate-detail-page">
@@ -161,13 +163,37 @@ const CandidateDetail = () => {
               <span className="label">Applied:</span>
               <span>{new Date(candidate.createdAt).toLocaleString()}</span>
             </div>
-            {candidate.glmScore !== null && (
+{candidate.glmScore !== null && (
               <div className="detail-row">
                 <span className="label">AI Score:</span>
                 <span className="score">{candidate.glmScore}/100</span>
               </div>
             )}
           </section>
+
+          {spiderMapEvaluation && spiderMapEvaluation.aspects && spiderMapEvaluation.aspects.length > 0 && (
+              <section className="detail-section">
+                <h2>Spider Map Evaluation</h2>
+                <div className="spider-map-container">
+                  <ResponsiveContainer width="100%" height={350}>
+                    <RadarChart cx="50%" cy="50%" outerRadius="70%" data={spiderMapEvaluation.aspects}>
+                      <PolarGrid />
+                      <PolarAngleAxis dataKey="aspect" tick={{ fontSize: 12 }} />
+                      <Radar
+                        name="Score"
+                        dataKey="score"
+                        stroke="#2563eb"
+                        fill="#2563eb"
+                        fillOpacity={0.5}
+                      />
+                    </RadarChart>
+                  </ResponsiveContainer>
+                </div>
+                {spiderMapEvaluation.summary && (
+                  <p className="glm-summary">{spiderMapEvaluation.summary}</p>
+                )}
+              </section>
+            )}
 
           {glmAnalysis && (
             <section className="detail-section">

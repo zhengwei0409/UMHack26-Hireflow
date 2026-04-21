@@ -43,6 +43,7 @@ export async function onCVUploaded(candidateId: string): Promise<void> {
     `;
 
     const analysis = await glmService.parseCV(candidate.cvFilePath, jobDescription);
+    const spiderMap = await glmService.generateSpiderMap(candidate.cvFilePath, jobDescription);
 
     await prisma.candidate.update({
       where: { id: candidateId },
@@ -50,6 +51,7 @@ export async function onCVUploaded(candidateId: string): Promise<void> {
         status: STATES.CV_UNDER_REVIEW,
         glmAnalysis: analysis as unknown as Prisma.InputJsonValue,
         glmScore: analysis.score,
+        spiderMapEvaluation: spiderMap as unknown as Prisma.InputJsonValue,
       },
     });
 

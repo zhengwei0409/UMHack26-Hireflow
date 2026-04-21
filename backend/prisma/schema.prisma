@@ -38,6 +38,7 @@ model Candidate {
   status                CandidateStatus @default(APPLIED)
   glmAnalysis           Json?
   glmScore              Int?
+  spiderMapEvaluation   Json?
   interviewDate        String?
   interviewTime        String?
   interviewLocation    String?

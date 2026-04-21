@@ -57,6 +57,7 @@ export async function listCandidates(filters: { jobId?: string; status?: string;
         email: true,
         status: true,
         glmScore: true,
+        spiderMapEvaluation: true,
         createdAt: true,
         job: { select: { title: true } },
       },
@@ -71,6 +72,7 @@ export async function listCandidates(filters: { jobId?: string; status?: string;
     jobTitle: c.job.title,
     status: c.status,
     glmScore: c.glmScore,
+    spiderMapEvaluation: c.spiderMapEvaluation,
     createdAt: c.createdAt,
     appliedAt: c.createdAt,
   }));

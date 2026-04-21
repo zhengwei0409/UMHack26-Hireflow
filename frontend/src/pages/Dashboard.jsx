@@ -48,7 +48,6 @@ const Dashboard = () => {
           <h1>AI Resume Screener</h1>
           <p className="dashboard-copy">Track active roles, review applicant progress, and surface top resumes for your hiring workflow.</p>
         </div>
-        <button className="primary-button">Create Job</button>
       </section>
 
       {loading && (
