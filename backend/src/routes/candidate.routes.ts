@@ -34,15 +34,21 @@ router.post('/apply', upload.single('cvFile'), candidateController.applyToJob);
 // Protected — HR only
 router.get('/', requireAuth, candidateController.listCandidates);
 router.get('/:id', requireAuth, candidateController.getCandidate);
+router.delete('/:id', requireAuth, candidateController.deleteCandidate);
 router.get('/:id/cv', requireAuth, candidateController.downloadCv);
 router.get('/:id/history', requireAuth, workflowController.getHistory);
 
 // Workflow actions
 router.post('/:id/actions/accept-cv', requireAuth, workflowController.acceptCv);
 router.post('/:id/actions/reject-cv', requireAuth, workflowController.rejectCv);
+router.post('/:id/actions/schedule-interview', requireAuth, workflowController.scheduleInterview);
 router.post('/:id/actions/mark-interview-done', requireAuth, workflowController.markInterviewDone);
 router.post('/:id/actions/accept-interview', requireAuth, workflowController.acceptInterview);
 router.post('/:id/actions/reject-interview', requireAuth, workflowController.rejectInterview);
 router.post('/:id/actions/retry', requireAuth, workflowController.retry);
+
+// Public — candidate responds to interview
+router.post('/respond/:id/confirm', workflowController.confirmInterview);
+router.post('/respond/:id/reschedule', workflowController.requestReschedule);
 
 export default router;

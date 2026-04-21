@@ -28,19 +28,23 @@ model Job {
 }
 
 model Candidate {
-  id          String          @id @default(uuid())
-  fullName    String
-  email       String
-  phone       String?
-  cvFilePath  String
-  jobId       String
-  job         Job             @relation(fields: [jobId], references: [id])
-  status      CandidateStatus @default(APPLIED)
-  glmAnalysis Json?
-  glmScore    Int?
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
-  history     StatusHistory[]
+  id                    String          @id @default(uuid())
+  fullName              String
+  email                 String
+  phone                 String?
+  cvFilePath            String
+  jobId                 String
+  job                   Job             @relation(fields: [jobId], references: [id])
+  status                CandidateStatus @default(APPLIED)
+  glmAnalysis           Json?
+  glmScore              Int?
+  interviewDate        String?
+  interviewTime        String?
+  interviewLocation    String?
+  interviewMeetingLink String?
+  createdAt             DateTime        @default(now())
+  updatedAt             DateTime        @updatedAt
+  history               StatusHistory[]
 }
 
 model StatusHistory {
@@ -81,4 +85,6 @@ enum CandidateStatus {
   ONBOARDING
   HIRED
   FAILED
+  INTERVIEW_CONFIRMED
+  INTERVIEW_RESCHEDULE_REQUESTED
 }
