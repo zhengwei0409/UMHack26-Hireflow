@@ -3,19 +3,45 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import api from '../services/api';
 
+const getPasswordHint = (value) => {
+  const hasMinLength = value.length >= 8;
+  const hasSpecialSymbol = /[^A-Za-z0-9]/.test(value);
+  const isValid = hasMinLength && hasSpecialSymbol;
+
+  return {
+    isValid,
+    message: isValid
+      ? 'Password meets the requirements.'
+      : 'Must be at least 8 characters with one special symbol.',
+  };
+};
+
 const Login = () => {
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
+  const [agreeToTerms, setAgreeToTerms] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const { login, register } = useAuth();
   const navigate = useNavigate();
+  const passwordHint = getPasswordHint(password);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
+
+    if (isRegister && !passwordHint.isValid) {
+      setError(passwordHint.message);
+      return;
+    }
+
+    if (isRegister && !agreeToTerms) {
+      setError('Please agree to the Terms of Service and Privacy Policy.');
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -36,6 +62,7 @@ const Login = () => {
     setIsRegister(nextMode === 'register');
     setError('');
     setPassword('');
+    setAgreeToTerms(false);
   };
 
   return (
@@ -105,6 +132,39 @@ const Login = () => {
                 autoComplete={isRegister ? 'new-password' : 'current-password'}
               />
             </label>
+
+            {isRegister && (
+              <>
+                <p
+                  className={`-mt-2 text-sm font-semibold ${
+                    passwordHint.isValid ? 'text-emerald-600' : 'text-[#8a8a8a]'
+                  }`}
+                >
+                  {passwordHint.message}
+                </p>
+
+                <label className="flex items-start gap-3 pt-3 text-xs font-semibold leading-relaxed text-[#777777]">
+                  <input
+                    className="mt-1 h-5 w-5 shrink-0 rounded border-[#cfcfcf] accent-black"
+                    type="checkbox"
+                    checked={agreeToTerms}
+                    onChange={(e) => setAgreeToTerms(e.target.checked)}
+                    required
+                  />
+                  <span>
+                    I agree to the{' '}
+                    <a className="font-extrabold text-[#273b72]" href="#">
+                      Terms of Service
+                    </a>{' '}
+                    and{' '}
+                    <a className="font-extrabold text-[#273b72]" href="#">
+                      Privacy Policy
+                    </a>
+                    .
+                  </span>
+                </label>
+              </>
+            )}
 
             {!isRegister && (
               <div className="flex items-center justify-between gap-4">
