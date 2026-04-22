@@ -1,168 +1,179 @@
 // Owner: Workflow Engineer
-// Orchestrates GLM analysis, email sending, and state transitions.
-// This is the "brain" that connects all the pieces.
+// Side-effect orchestration layered on top of the candidate workflow spine.
 
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { STATES } from '../workflow/states';
-import * as glmService from './glm.service';
+import * as autoScreenService from './auto-screen.service';
 import * as emailService from './email.service';
-
-export interface WorkflowContext {
-  candidateId: string;
-}
+import * as glmService from './glm.service';
+import { createOrReuseInterviewSession } from './interview-orchestrator.service';
+import { transitionCandidateStatus } from './workflow-state.service';
 
 async function getCandidateWithRelations(candidateId: string) {
   const candidate = await prisma.candidate.findUnique({
     where: { id: candidateId },
     include: { job: true },
   });
-  if (!candidate) throw new Error('CANDIDATE_NOT_FOUND');
+
+  if (!candidate) {
+    throw new Error('CANDIDATE_NOT_FOUND');
+  }
+
   return candidate;
+}
+
+function getFrontendBaseUrl() {
+  return process.env.APP_URL || process.env.FRONTEND_URL || 'http://localhost:5173';
+}
+
+async function sendAiInterviewInvite(candidateId: string) {
+  const candidate = await getCandidateWithRelations(candidateId);
+  const session = await createOrReuseInterviewSession(candidateId);
+  const interviewLink = `${getFrontendBaseUrl()}/interview/${session.inviteToken}`;
+
+  const emailSent = await emailService.sendAiInterviewInvite(
+    { fullName: candidate.fullName, email: candidate.email },
+    { title: candidate.job.title },
+    interviewLink,
+  );
+
+  if (!emailSent) {
+    await transitionCandidateStatus({
+      candidateId,
+      fromStatus: STATES.AI_INTERVIEW_INVITED,
+      toStatus: STATES.INTERVIEW_INVITE_FAILED,
+      event: 'AI_INTERVIEW_INVITE_FAILED',
+      triggeredBy: 'SYSTEM',
+      metadata: {
+        reason: 'Email send failed',
+      } as Prisma.InputJsonValue,
+    });
+
+    throw new Error('INTERVIEW_INVITE_FAILED');
+  }
+
+  return {
+    sessionId: session.id,
+    interviewLink,
+  };
 }
 
 export async function onCVUploaded(candidateId: string): Promise<void> {
   const candidate = await getCandidateWithRelations(candidateId);
 
-  await prisma.candidate.update({
-    where: { id: candidateId },
-    data: { status: STATES.CV_PARSING },
+  await transitionCandidateStatus({
+    candidateId,
+    fromStatus: candidate.status,
+    toStatus: STATES.CV_PARSING,
+    event: 'CV_PARSING_STARTED',
+    triggeredBy: 'SYSTEM',
   });
 
   try {
-    const requirements = Array.isArray(candidate.job.requirements) 
-      ? (candidate.job.requirements as string[]).join(', ')
-      : String(candidate.job.requirements ?? '');
+    const { analysis, threshold, decision } = await autoScreenService.runAutoScreen(candidateId);
 
-    const jobDescription = `
-      Title: ${candidate.job.title}
-      Department: ${candidate.job.department}
-      Description: ${candidate.job.description}
-      Requirements: ${requirements}
-      Location: ${candidate.job.location}
-    `;
+    if (decision === 'PASS') {
+      await transitionCandidateStatus({
+        candidateId,
+        fromStatus: STATES.CV_UNDER_REVIEW,
+        toStatus: STATES.AI_INTERVIEW_INVITED,
+        event: 'AUTO_SCREEN_PASSED',
+        triggeredBy: 'SYSTEM',
+        metadata: {
+          score: analysis.score,
+          threshold,
+        } as Prisma.InputJsonValue,
+      });
 
-    const analysis = await glmService.parseCV(candidate.cvFilePath, jobDescription);
+      await sendAiInterviewInvite(candidateId);
+      return;
+    }
 
-    await prisma.candidate.update({
-      where: { id: candidateId },
-      data: {
-        status: STATES.CV_UNDER_REVIEW,
-        glmAnalysis: analysis as unknown as Prisma.InputJsonValue,
-        glmScore: analysis.score,
-      },
-    });
+    if (decision === 'REJECT') {
+      await emailService.sendRejectionEmail(
+        { fullName: candidate.fullName, email: candidate.email },
+        { title: candidate.job.title },
+        'cv',
+      );
+
+      await transitionCandidateStatus({
+        candidateId,
+        fromStatus: STATES.CV_UNDER_REVIEW,
+        toStatus: STATES.CV_REJECTED,
+        event: 'AUTO_SCREEN_REJECTED',
+        triggeredBy: 'SYSTEM',
+        metadata: {
+          score: analysis.score,
+          threshold,
+        } as Prisma.InputJsonValue,
+      });
+      return;
+    }
 
     await prisma.statusHistory.create({
       data: {
         candidateId,
-        fromStatus: STATES.CV_PARSING,
+        fromStatus: STATES.CV_UNDER_REVIEW,
         toStatus: STATES.CV_UNDER_REVIEW,
-        event: 'CV_ANALYZED',
-        triggeredBy: 'GLM',
-        metadata: { score: analysis.score, recommendation: analysis.recommendation },
+        event: 'AUTO_SCREEN_REQUIRES_HR_REVIEW',
+        triggeredBy: 'SYSTEM',
+        metadata: {
+          score: analysis.score,
+          threshold,
+          decision,
+        },
       },
     });
   } catch (error) {
     console.error('CV analysis failed:', error);
-    await prisma.candidate.update({
-      where: { id: candidateId },
-      data: { status: STATES.CV_PARSE_FAILED },
-    });
-    await prisma.statusHistory.create({
-      data: {
-        candidateId,
-        fromStatus: STATES.CV_PARSING,
-        toStatus: STATES.CV_PARSE_FAILED,
-        event: 'CV_ANALYSIS_FAILED',
-        triggeredBy: 'SYSTEM',
-        metadata: { error: String(error) },
-      },
+
+    await transitionCandidateStatus({
+      candidateId,
+      fromStatus: STATES.CV_PARSING,
+      toStatus: STATES.CV_PARSE_FAILED,
+      event: 'CV_ANALYSIS_FAILED',
+      triggeredBy: 'SYSTEM',
+      metadata: {
+        error: String(error),
+      } as Prisma.InputJsonValue,
     });
   }
 }
 
-export async function onAcceptCV(candidateId: string, note?: string): Promise<void> {
+export async function onAcceptCV(candidateId: string) {
+  return sendAiInterviewInvite(candidateId);
+}
+
+export async function onRejectCV(candidateId: string) {
   const candidate = await getCandidateWithRelations(candidateId);
 
-  const emailSent = await emailService.sendInterviewInvite(
-    { fullName: candidate.fullName, email: candidate.email, candidateId },
-    { title: candidate.job.title, candidateId },
-    {
-      date: 'TBD',
-      time: 'TBD',
-      location: candidate.job.location,
-      meetingLink: '',
-    }
+  await emailService.sendRejectionEmail(
+    { fullName: candidate.fullName, email: candidate.email },
+    { title: candidate.job.title },
+    'cv',
   );
-
-  if (!emailSent) {
-    await prisma.candidate.update({
-      where: { id: candidateId },
-      data: { status: STATES.INTERVIEW_INVITE_FAILED },
-    });
-    await prisma.statusHistory.create({
-      data: {
-        candidateId,
-        fromStatus: STATES.INTERVIEW_PENDING,
-        toStatus: STATES.INTERVIEW_INVITE_FAILED,
-        event: 'INTERVIEW_INVITE_FAILED',
-        triggeredBy: 'SYSTEM',
-        metadata: { error: 'Email send failed' },
-      },
-    });
-    throw new Error('INTERVIEW_INVITE_FAILED');
-  }
-
-  await prisma.candidate.update({
-    where: { id: candidateId },
-    data: { status: STATES.INTERVIEW_PENDING },
-  });
-
-  await prisma.statusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: STATES.CV_UNDER_REVIEW,
-      toStatus: STATES.INTERVIEW_PENDING,
-      event: 'INTERVIEW_INVITE_SENT',
-      triggeredBy: 'HR',
-      metadata: { note },
-    },
-  });
 }
 
 export async function scheduleInterview(
   candidateId: string,
   data: { date: string; time: string; location: string; meetingLink?: string },
-  note?: string
-): Promise<void> {
+) {
   const candidate = await getCandidateWithRelations(candidateId);
 
   const emailSent = await emailService.sendInterviewSchedule(
     { fullName: candidate.fullName, email: candidate.email, candidateId },
     { title: candidate.job.title, candidateId },
-    data
+    data,
   );
 
   await prisma.candidate.update({
     where: { id: candidateId },
     data: {
-      status: STATES.INTERVIEW_SCHEDULED,
       interviewDate: data.date,
       interviewTime: data.time,
       interviewLocation: data.location,
       interviewMeetingLink: data.meetingLink || null,
-    },
-  });
-
-  await prisma.statusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: STATES.INTERVIEW_PENDING,
-      toStatus: STATES.INTERVIEW_SCHEDULED,
-      event: 'INTERVIEW_SCHEDULED',
-      triggeredBy: 'HR',
-      metadata: { ...data, note },
     },
   });
 
@@ -171,50 +182,8 @@ export async function scheduleInterview(
   }
 }
 
-export async function onRejectCV(candidateId: string, note?: string): Promise<void> {
+export async function onAcceptInterview(candidateId: string): Promise<void> {
   const candidate = await getCandidateWithRelations(candidateId);
-
-  await emailService.sendRejectionEmail(
-    { fullName: candidate.fullName, email: candidate.email },
-    { title: candidate.job.title },
-    'cv'
-  );
-
-  await prisma.candidate.update({
-    where: { id: candidateId },
-    data: { status: STATES.CV_REJECTED },
-  });
-
-  await prisma.statusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: STATES.CV_UNDER_REVIEW,
-      toStatus: STATES.CV_REJECTED,
-      event: 'CV_REJECTED',
-      triggeredBy: 'HR',
-      metadata: { note },
-    },
-  });
-}
-
-export async function onAcceptInterview(candidateId: string, note?: string): Promise<void> {
-  const candidate = await getCandidateWithRelations(candidateId);
-
-  await prisma.candidate.update({
-    where: { id: candidateId },
-    data: { status: STATES.OFFER_GENERATING },
-  });
-
-  await prisma.statusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: STATES.INTERVIEW_DONE,
-      toStatus: STATES.OFFER_GENERATING,
-      event: 'OFFER_GENERATING',
-      triggeredBy: 'HR',
-      metadata: { note },
-    },
-  });
 
   try {
     const offerLetter = await glmService.generateOfferLetter(
@@ -223,94 +192,64 @@ export async function onAcceptInterview(candidateId: string, note?: string): Pro
         title: candidate.job.title,
         department: candidate.job.department,
         location: candidate.job.location,
-      }
+      },
     );
 
     const emailSent = await emailService.sendOfferLetter(
       { fullName: candidate.fullName, email: candidate.email },
       { title: candidate.job.title },
-      { subject: offerLetter.subject, body: offerLetter.body }
+      { subject: offerLetter.subject, body: offerLetter.body },
     );
 
     if (!emailSent) {
       console.error('Failed to send offer letter email');
     }
 
-    await prisma.candidate.update({
-      where: { id: candidateId },
-      data: { status: STATES.OFFER_SENT },
-    });
-
-    await prisma.statusHistory.create({
-      data: {
-        candidateId,
-        fromStatus: STATES.OFFER_GENERATING,
-        toStatus: STATES.OFFER_SENT,
-        event: 'OFFER_SENT',
-        triggeredBy: 'SYSTEM',
-        metadata: { offerSubject: offerLetter.subject },
-      },
+    await transitionCandidateStatus({
+      candidateId,
+      fromStatus: STATES.OFFER_GENERATING,
+      toStatus: STATES.OFFER_SENT,
+      event: 'OFFER_SENT',
+      triggeredBy: 'SYSTEM',
+      metadata: {
+        offerSubject: offerLetter.subject,
+      } as Prisma.InputJsonValue,
     });
   } catch (error) {
     console.error('Offer letter generation failed:', error);
-    await prisma.candidate.update({
-      where: { id: candidateId },
-      data: { status: STATES.FAILED },
+
+    await transitionCandidateStatus({
+      candidateId,
+      fromStatus: STATES.OFFER_GENERATING,
+      toStatus: STATES.FAILED,
+      event: 'OFFER_GENERATION_FAILED',
+      triggeredBy: 'SYSTEM',
+      metadata: {
+        error: String(error),
+      } as Prisma.InputJsonValue,
     });
-    await prisma.statusHistory.create({
-      data: {
-        candidateId,
-        fromStatus: STATES.OFFER_GENERATING,
-        toStatus: STATES.FAILED,
-        event: 'OFFER_GENERATION_FAILED',
-        triggeredBy: 'SYSTEM',
-        metadata: { error: String(error) },
-      },
-    });
+
     throw new Error('OFFER_GENERATION_FAILED');
   }
 }
 
-export async function onRejectInterview(candidateId: string, note?: string): Promise<void> {
+export async function onRejectInterview(candidateId: string): Promise<void> {
   const candidate = await getCandidateWithRelations(candidateId);
 
   await emailService.sendRejectionEmail(
     { fullName: candidate.fullName, email: candidate.email },
     { title: candidate.job.title },
-    'interview'
+    'interview',
   );
-
-  await prisma.candidate.update({
-    where: { id: candidateId },
-    data: { status: STATES.INTERVIEW_REJECTED },
-  });
-
-  await prisma.statusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: STATES.INTERVIEW_DONE,
-      toStatus: STATES.INTERVIEW_REJECTED,
-      event: 'INTERVIEW_REJECTED',
-      triggeredBy: 'HR',
-      metadata: { note },
-    },
-  });
 }
 
 export async function onOfferAccepted(candidateId: string): Promise<void> {
-  await prisma.candidate.update({
-    where: { id: candidateId },
-    data: { status: STATES.HIRED },
-  });
-
-  await prisma.statusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: STATES.OFFER_SENT,
-      toStatus: STATES.HIRED,
-      event: 'OFFER_ACCEPTED',
-      triggeredBy: 'CANDIDATE',
-    },
+  await transitionCandidateStatus({
+    candidateId,
+    fromStatus: STATES.OFFER_SENT,
+    toStatus: STATES.HIRED,
+    event: 'OFFER_ACCEPTED',
+    triggeredBy: 'CANDIDATE',
   });
 }
 
@@ -321,26 +260,28 @@ export async function confirmInterview(candidateId: string, candidateEmail: stri
     throw new Error('UNAUTHORIZED');
   }
 
-  await prisma.candidate.update({
-    where: { id: candidateId },
-    data: { status: STATES.INTERVIEW_CONFIRMED },
+  await transitionCandidateStatus({
+    candidateId,
+    fromStatus: STATES.INTERVIEW_SCHEDULED,
+    toStatus: STATES.INTERVIEW_CONFIRMED,
+    event: 'INTERVIEW_CONFIRMED',
+    triggeredBy: 'CANDIDATE',
   });
 
-  await prisma.statusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: STATES.INTERVIEW_SCHEDULED,
-      toStatus: STATES.INTERVIEW_CONFIRMED,
-      event: 'INTERVIEW_CONFIRMED',
-      triggeredBy: 'CANDIDATE',
+  await emailService.notifyHRInterviewConfirmed(
+    { fullName: candidate.fullName, email: candidate.email, job: { title: candidate.job.title } },
+    {
+      date: candidate.interviewDate || 'TBD',
+      time: candidate.interviewTime || 'TBD',
+      location: candidate.interviewLocation || candidate.job.location,
     },
-  });
+  );
 }
 
 export async function requestReschedule(
   candidateId: string,
   candidateEmail: string,
-  reason?: string
+  reason?: string,
 ): Promise<void> {
   const candidate = await getCandidateWithRelations(candidateId);
 
@@ -348,21 +289,17 @@ export async function requestReschedule(
     throw new Error('UNAUTHORIZED');
   }
 
-  await prisma.candidate.update({
-    where: { id: candidateId },
-    data: { status: STATES.INTERVIEW_RESCHEDULE_REQUESTED },
+  await transitionCandidateStatus({
+    candidateId,
+    fromStatus: STATES.INTERVIEW_SCHEDULED,
+    toStatus: STATES.INTERVIEW_RESCHEDULE_REQUESTED,
+    event: 'INTERVIEW_RESCHEDULE_REQUESTED',
+    triggeredBy: 'CANDIDATE',
+    metadata: reason ? ({ reason } as Prisma.InputJsonValue) : undefined,
   });
 
-  await prisma.statusHistory.create({
-    data: {
-      candidateId,
-      fromStatus: STATES.INTERVIEW_SCHEDULED,
-      toStatus: STATES.INTERVIEW_RESCHEDULE_REQUESTED,
-      event: 'RESCHEDULE_REQUESTED',
-      triggeredBy: 'CANDIDATE',
-      metadata: { reason },
-    },
-  });
-
-  await emailService.notifyHRRescheduleRequest(candidate, reason);
+  await emailService.notifyHRRescheduleRequest(
+    { fullName: candidate.fullName, email: candidate.email, job: { title: candidate.job.title } },
+    reason,
+  );
 }

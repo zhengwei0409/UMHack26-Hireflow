@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import api from './services/api';
 import SharedLayout from './components/SharedLayout';
 import Login from './pages/Login';
@@ -11,6 +11,10 @@ import CandidateDetail from './pages/CandidateDetail';
 import Apply from './pages/Apply';
 import AuthCallback from './pages/AuthCallback';
 import InterviewResponse from './pages/InterviewResponse';
+import InterviewIntro from './pages/InterviewIntro';
+import InterviewRoom from './pages/InterviewRoom';
+import InterviewComplete from './pages/InterviewComplete';
+import RankedShortlist from './pages/RankedShortlist';
 
 const AuthContext = createContext(null);
 
@@ -92,12 +96,17 @@ function App() {
           <Route path="/interview/confirm/:candidateId" element={<InterviewResponse type="confirm" />} />
           <Route path="/interview/reschedule/:candidateId" element={<InterviewResponse type="reschedule" />} />
           <Route path="/apply/:jobId" element={<Apply />} />
+          <Route path="/interview/:token" element={<InterviewIntro />} />
+          <Route path="/interview/:token/room" element={<InterviewRoom />} />
+          <Route path="/interview/:token/complete" element={<InterviewComplete />} />
           <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
           <Route path="/" element={<PrivateRoute><SharedLayout /></PrivateRoute>}>
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="jobs" element={<Jobs />} />
             <Route path="jobs/:id" element={<JobDetail />} />
+            <Route path="jobs/:id/shortlist" element={<RankedShortlist />} />
+            <Route path="shortlist" element={<RankedShortlist />} />
             <Route path="candidates" element={<Candidates />} />
             <Route path="candidates/:id" element={<CandidateDetail />} />
           </Route>

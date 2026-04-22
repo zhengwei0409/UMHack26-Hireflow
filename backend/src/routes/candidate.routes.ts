@@ -4,6 +4,7 @@ import path from 'path';
 import { requireAuth } from '../middleware/auth.middleware';
 import * as candidateController from '../controllers/candidate.controller';
 import * as workflowController from '../controllers/workflow.controller';
+import * as interviewController from '../controllers/interview.controller';
 
 const storage = multer.diskStorage({
   destination: 'uploads/cv/',
@@ -37,14 +38,18 @@ router.get('/:id', requireAuth, candidateController.getCandidate);
 router.delete('/:id', requireAuth, candidateController.deleteCandidate);
 router.get('/:id/cv', requireAuth, candidateController.downloadCv);
 router.get('/:id/history', requireAuth, workflowController.getHistory);
+router.get('/:id/ai-report', requireAuth, interviewController.getCandidateAiReport);
 
 // Workflow actions
 router.post('/:id/actions/accept-cv', requireAuth, workflowController.acceptCv);
 router.post('/:id/actions/reject-cv', requireAuth, workflowController.rejectCv);
+router.post('/:id/actions/override-auto-screen-pass', requireAuth, workflowController.overrideAutoScreenPass);
 router.post('/:id/actions/schedule-interview', requireAuth, workflowController.scheduleInterview);
 router.post('/:id/actions/mark-interview-done', requireAuth, workflowController.markInterviewDone);
 router.post('/:id/actions/accept-interview', requireAuth, workflowController.acceptInterview);
 router.post('/:id/actions/reject-interview', requireAuth, workflowController.rejectInterview);
+router.post('/:id/actions/advance-to-human-interview', requireAuth, workflowController.advanceToHumanInterview);
+router.post('/:id/actions/reject-after-ai', requireAuth, workflowController.rejectAfterAi);
 router.post('/:id/actions/retry', requireAuth, workflowController.retry);
 
 // Public — candidate responds to interview

@@ -39,7 +39,11 @@ export async function applyToJob(data: {
 }
 
 export async function listCandidates(filters: { jobId?: string; status?: string; page: number; limit: number }) {
-  const where: any = {};
+  const where: any = {
+    job: {
+      status: 'OPEN',
+    },
+  };
   if (filters.jobId) where.jobId = filters.jobId;
   if (filters.status) where.status = filters.status;
 
@@ -57,8 +61,12 @@ export async function listCandidates(filters: { jobId?: string; status?: string;
         email: true,
         status: true,
         glmScore: true,
+        autoScreenDecision: true,
+        aiInterviewScore: true,
+        aiInterviewRank: true,
+        isShortlisted: true,
         createdAt: true,
-        job: { select: { title: true } },
+        job: { select: { title: true, status: true } },
       },
     }),
     prisma.candidate.count({ where }),
@@ -71,6 +79,10 @@ export async function listCandidates(filters: { jobId?: string; status?: string;
     jobTitle: c.job.title,
     status: c.status,
     glmScore: c.glmScore,
+    autoScreenDecision: c.autoScreenDecision,
+    aiInterviewScore: c.aiInterviewScore,
+    aiInterviewRank: c.aiInterviewRank,
+    isShortlisted: c.isShortlisted,
     createdAt: c.createdAt,
     appliedAt: c.createdAt,
   }));
@@ -84,6 +96,20 @@ export async function getCandidateById(id: string) {
     include: {
       job: true,
       history: { orderBy: { createdAt: 'asc' } },
+      interviewSessions: {
+        include: {
+          questions: {
+            include: {
+              answers: true,
+            },
+            orderBy: { sequence: 'asc' },
+          },
+          proctorEvents: {
+            orderBy: { occurredAt: 'desc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      },
     },
   });
   if (!candidate) throw new Error('CANDIDATE_NOT_FOUND');
@@ -92,6 +118,66 @@ export async function getCandidateById(id: string) {
   return {
     ...candidate,
     cvDownloadUrl: `${baseUrl}/api/v1/candidates/${id}/cv`,
+  };
+}
+
+export async function getCandidateAIReport(id: string) {
+  const candidate = await prisma.candidate.findUnique({
+    where: { id },
+    include: {
+      job: true,
+      interviewSessions: {
+        include: {
+          questions: {
+            include: {
+              answers: true,
+            },
+            orderBy: { sequence: 'asc' },
+          },
+          proctorEvents: {
+            orderBy: { occurredAt: 'desc' },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+        take: 1,
+      },
+    },
+  });
+
+  if (!candidate) throw new Error('CANDIDATE_NOT_FOUND');
+
+  const latestSession = candidate.interviewSessions[0] || null;
+
+  return {
+    candidateId: candidate.id,
+    fullName: candidate.fullName,
+    jobTitle: candidate.job.title,
+    status: candidate.status,
+    glmScore: candidate.glmScore,
+    aiInterviewScore: candidate.aiInterviewScore,
+    aiInterviewRank: candidate.aiInterviewRank,
+    isShortlisted: candidate.isShortlisted,
+    autoScreenDecision: candidate.autoScreenDecision,
+    summary: latestSession?.scoreBreakdown ?? null,
+    session: latestSession
+      ? {
+          id: latestSession.id,
+          status: latestSession.status,
+          startedAt: latestSession.startedAt,
+          completedAt: latestSession.completedAt,
+          scoredAt: latestSession.scoredAt,
+          overallScore: latestSession.overallScore,
+          scoreBreakdown: latestSession.scoreBreakdown,
+          questions: latestSession.questions.map((question) => ({
+            id: question.id,
+            type: question.type,
+            sequence: question.sequence,
+            prompt: question.prompt,
+            latestAnswer: question.answers[0] || null,
+          })),
+          proctorEvents: latestSession.proctorEvents,
+        }
+      : null,
   };
 }
 
@@ -116,6 +202,18 @@ export async function deleteCandidate(id: string) {
     }
   }
 
+  const sessions = await prisma.interviewSession.findMany({
+    where: { candidateId: id },
+    select: { id: true },
+  });
+
+  for (const session of sessions) {
+    await prisma.proctorEvent.deleteMany({ where: { sessionId: session.id } });
+    await prisma.candidateAnswer.deleteMany({ where: { sessionId: session.id } });
+    await prisma.interviewQuestion.deleteMany({ where: { sessionId: session.id } });
+  }
+
+  await prisma.interviewSession.deleteMany({ where: { candidateId: id } });
   await prisma.statusHistory.deleteMany({ where: { candidateId: id } });
   await prisma.candidate.delete({ where: { id } });
 }

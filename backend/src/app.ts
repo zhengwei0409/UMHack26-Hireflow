@@ -4,6 +4,7 @@ import authRoutes from './routes/auth.routes';
 import jobRoutes from './routes/job.routes';
 import candidateRoutes from './routes/candidate.routes';
 import dashboardRoutes from './routes/dashboard.routes';
+import interviewRoutes from './routes/interview.routes';
 
 const app = express();
 
@@ -17,6 +18,7 @@ app.use('/api/v1/auth', authRoutes);
 app.use('/api/v1/jobs', jobRoutes);
 app.use('/api/v1/candidates', candidateRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
+app.use('/api/v1/interviews', interviewRoutes);
 
 app.get('/health', (req, res) => {
   res.json({ status: 'ok' });

@@ -3,6 +3,10 @@ import * as engine from '../workflow/engine';
 import * as automation from '../services/workflow-automation.service';
 
 const NEXT_ACTIONS: Record<string, string[]> = {
+  AI_INTERVIEW_INVITED: ['Candidate can open the AI interview link to begin the prescreen'],
+  AI_INTERVIEW_IN_PROGRESS: ['Wait for the candidate to submit the AI interview'],
+  AI_INTERVIEW_COMPLETED: ['AI scoring will finalize the result automatically'],
+  AI_INTERVIEW_SCORED: ['Review AI evidence and advance strong candidates to human interview'],
   INTERVIEW_PENDING: ['Schedule interview time slot'],
   INTERVIEW_SCHEDULED: ['Candidate will receive email to confirm'],
   INTERVIEW_CONFIRMED: ['Mark interview as done after completion'],
@@ -24,20 +28,20 @@ async function handleAction(req: Request<{ id: string }>, res: Response, action:
     const { previousStatus, newStatus } = await engine.applyAction(id, action, triggeredBy, note);
 
     if (action === 'accept-cv') {
-      await automation.onAcceptCV(id, note).catch((err) => {
+      await automation.onAcceptCV(id).catch((err) => {
         console.error('onAcceptCV automation failed:', err.message);
       });
     } else if (action === 'reject-cv') {
-      await automation.onRejectCV(id, note).catch((err) => {
+      await automation.onRejectCV(id).catch((err) => {
         console.error('onRejectCV automation failed:', err.message);
       });
     } else if (action === 'accept-interview') {
-      await automation.onAcceptInterview(id, note).catch((err) => {
+      await automation.onAcceptInterview(id).catch((err) => {
         console.error('onAcceptInterview automation failed:', err.message);
       });
-    } else if (action === 'reject-interview') {
-      await automation.onRejectInterview(id, note).catch((err) => {
-        console.error('onRejectInterview automation failed:', err.message);
+    } else if (action === 'reject-interview' || action === 'reject-after-ai') {
+      await automation.onRejectInterview(id).catch((err) => {
+        console.error('reject automation failed:', err.message);
       });
     } else if (action === 'mark-interview-done') {
       // No automation needed after marking interview done - just wait for HR decision
@@ -80,6 +84,15 @@ export const acceptInterview = (req: Request<{ id: string }>, res: Response) =>
 export const rejectInterview = (req: Request<{ id: string }>, res: Response) =>
   handleAction(req, res, 'reject-interview');
 
+export const advanceToHumanInterview = (req: Request<{ id: string }>, res: Response) =>
+  handleAction(req, res, 'advance-to-human-interview');
+
+export const rejectAfterAi = (req: Request<{ id: string }>, res: Response) =>
+  handleAction(req, res, 'reject-after-ai');
+
+export const overrideAutoScreenPass = (req: Request<{ id: string }>, res: Response) =>
+  handleAction(req, res, 'override-auto-screen-pass');
+
 export const retry = (req: Request<{ id: string }>, res: Response) =>
   handleAction(req, res, 'retry');
 
@@ -106,17 +119,22 @@ export async function getHistory(req: Request<{ id: string }>, res: Response) {
 export async function scheduleInterview(req: Request<{ id: string }>, res: Response) {
   const { id } = req.params;
   const { date, time, location, meetingLink, note } = req.body ?? {};
+  const triggeredBy = (req as any).user?.id ?? 'UNKNOWN';
 
   if (!date || !time || !location) {
     return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'date, time, and location are required' } });
   }
 
   try {
-    await automation.scheduleInterview(id, { date, time, location, meetingLink }, note);
-    return res.status(200).json({ success: true, data: { candidateId: id, message: 'Interview scheduled' } });
+    const { newStatus } = await engine.applyAction(id, 'schedule-interview', triggeredBy, note);
+    await automation.scheduleInterview(id, { date, time, location, meetingLink });
+    return res.status(200).json({ success: true, data: { candidateId: id, message: 'Interview scheduled', newStatus } });
   } catch (err: any) {
     if (err.message === 'CANDIDATE_NOT_FOUND') {
       return res.status(404).json({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found' } });
+    }
+    if (err.message === 'INVALID_STATE_FOR_ACTION') {
+      return res.status(409).json({ success: false, error: { code: 'INVALID_STATE_FOR_ACTION', message: 'Candidate is not ready for interview scheduling' } });
     }
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }
