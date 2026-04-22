@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useState, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation, useParams } from 'react-router-dom';
 import api from './services/api';
 import SharedLayout from './components/SharedLayout';
@@ -48,13 +48,20 @@ function AuthProvider({ children }) {
     return res;
   };
 
+  const completeAuthFromToken = useCallback(async (token) => {
+    localStorage.setItem('hireflow_token', token);
+    const res = await api.auth.me();
+    setUser(res.data);
+    return res.data;
+  }, []);
+
   const logout = () => {
     localStorage.removeItem('hireflow_token');
     setUser(null);
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, register, logout, loading }}>
+    <AuthContext.Provider value={{ user, login, register, completeAuthFromToken, logout, loading }}>
       {children}
     </AuthContext.Provider>
   );
