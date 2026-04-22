@@ -26,14 +26,15 @@ event: HR_ACCEPTS
 | `CV_PARSE_FAILED` | CV 分析失败 | GLM 挂了 / CV 格式错 — 需要 HR 介入 |
 | `CV_UNDER_REVIEW` | HR 审核中 | GLM 出了 recommendation，等 HR 决定 |
 | `CV_REJECTED` | CV 阶段拒绝 | HR 拒了 — 终止状态 |
-| `INTERVIEW_PENDING` | 面试邀请发送中 | 系统正在发 email + 订 calendar |
-| `INTERVIEW_SCHEDULED` | 面试已安排 | Email 发了，Calendar 订了，等面试 |
-| `INTERVIEW_INVITE_FAILED` | 邀请发送失败 | Email/Calendar API 挂了 — 需要重试 |
+| `INTERVIEW_PENDING` | 等待安排面试 | HR点了Accept，等HR安排时间 |
+| `INTERVIEW_SCHEDULED` | 面试已安排 | Email发了，等候选人确认 |
+| `INTERVIEW_CONFIRMED` | 候选人已确认 | 候选人确认参加面试 |
+| `INTERVIEW_RESCHEDULE_REQUESTED` | 候选人请求改期 | 候选人要求改时间 |
+| `INTERVIEW_INVITE_FAILED` | 邀请发送失败 | Email API 挂了 — 需要重试 |
 | `INTERVIEW_DONE` | 面试完成 | 面试结束，等 HR 决定 |
 | `INTERVIEW_REJECTED` | 面试阶段拒绝 | HR 面试后拒了 — 终止状态 |
 | `OFFER_GENERATING` | Offer 生成中 | GLM 在写 offer letter |
 | `OFFER_SENT` | Offer 已发 | Offer email 发出去了 |
-| `ONBOARDING` | 入职流程中 | 创建 account、发 IT request |
 | `HIRED` | 已入职 | 终止状态 ✅ |
 | `FAILED` | 系统失败 | 终止状态 ❌ 需要 HR 手动处理 |
 
@@ -48,14 +49,14 @@ event: HR_ACCEPTS
 | `GLM_PARSE_FAIL` | System | GLM 失败 |
 | `HR_ACCEPT_CV` | HR | HR 审核后点 Accept |
 | `HR_REJECT_CV` | HR | HR 审核后点 Reject |
-| `INVITE_SENT` | System | Email + Calendar 都成功 |
-| `INVITE_FAIL` | System | Email 或 Calendar 失败 |
-| `INTERVIEW_COMPLETED` | HR | HR 在 dashboard 标记面试完成 |
+| `HR_SCHEDULE_INTERVIEW` | HR | HR 安排面试时间并发送邮件 |
+| `INTERVIEW_CONFIRMED` | Candidate | 候选人确认面试 |
+| `RESCHEDULE_REQUESTED` | Candidate | 候选人请求改期 |
+| `HR_MARK_INTERVIEW_DONE` | HR | HR 标记面试完成 |
 | `HR_ACCEPT_INTERVIEW` | HR | 面试后 HR Accept |
 | `HR_REJECT_INTERVIEW` | HR | 面试后 HR Reject |
 | `OFFER_GENERATED` | System (GLM) | Offer letter 写好了 |
 | `OFFER_EMAIL_SENT` | System | Offer 发给 candidate |
-| `ONBOARDING_COMPLETE` | System | 所有入职任务完成 |
 | `RETRY` | HR | 从失败状态重试 |
 
 ---
@@ -79,9 +80,13 @@ CV_PARSING
    │                              │
    │                              └── HR_ACCEPT_CV ──▶ INTERVIEW_PENDING
    │                                                        │
-   │                                                        ├── INVITE_SENT ──▶ INTERVIEW_SCHEDULED
+   │                                                        ├── HR_SCHEDULE_INTERVIEW ──▶ INTERVIEW_SCHEDULED
    │                                                        │                         │
-   │                                                        │                         │ INTERVIEW_COMPLETED
+   │                                                        │                         ├── INTERVIEW_CONFIRMED ──▶ (等面试)
+   │                                                        │                         │
+   │                                                        │                         ├── RESCHEDULE_REQUESTED ──▶ (HR安排新课程)
+   │                                                        │                         │
+   │                                                        │                         │ HR_MARK_INTERVIEW_DONE
    │                                                        │                         ▼
    │                                                        │                   INTERVIEW_DONE
    │                                                        │                         │
@@ -93,11 +98,7 @@ CV_PARSING
    │                                                        │                                                          ▼
    │                                                        │                                                     OFFER_SENT
    │                                                        │                                                          │
-   │                                                        │                                                          │ OFFER_EMAIL_SENT
-   │                                                        │                                                          ▼
-   │                                                        │                                                     ONBOARDING
-   │                                                        │                                                          │
-   │                                                        │                                                          │ ONBOARDING_COMPLETE
+   │                                                        │                                                          │ OFFER_ACCEPTED
    │                                                        │                                                          ▼
    │                                                        │                                                       HIRED [END]
    │                                                        │
@@ -108,10 +109,10 @@ CV_PARSING
    │                                                                           (back to INTERVIEW_PENDING)
    │
    └── GLM_PARSE_FAIL ──▶ CV_PARSE_FAILED
-                              │
-                              │ RETRY
-                              ▼
-                        (back to CV_PARSING)
+                               │
+                               │ RETRY
+                               ▼
+                         (back to CV_PARSING)
 ```
 
 ---

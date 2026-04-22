@@ -1,13 +1,18 @@
 import { Request, Response } from 'express';
 import * as engine from '../workflow/engine';
+import * as automation from '../services/workflow-automation.service';
 
 const NEXT_ACTIONS: Record<string, string[]> = {
-  INTERVIEW_PENDING: ['Email will be sent automatically'],
+  INTERVIEW_PENDING: ['Schedule interview time slot'],
+  INTERVIEW_SCHEDULED: ['Candidate will receive email to confirm'],
+  INTERVIEW_CONFIRMED: ['Mark interview as done after completion'],
+  INTERVIEW_RESCHEDULE_REQUESTED: ['Review and reschedule interview'],
   CV_REJECTED: [],
   OFFER_GENERATING: ['Offer letter will be generated automatically'],
   INTERVIEW_REJECTED: [],
   CV_PARSING: ['GLM analysis will start automatically'],
   INTERVIEW_DONE: ['HR can now accept or reject the interview'],
+  CV_UNDER_REVIEW: ['Review GLM analysis and make decision'],
 };
 
 async function handleAction(req: Request<{ id: string }>, res: Response, action: string) {
@@ -17,6 +22,27 @@ async function handleAction(req: Request<{ id: string }>, res: Response, action:
 
   try {
     const { previousStatus, newStatus } = await engine.applyAction(id, action, triggeredBy, note);
+
+    if (action === 'accept-cv') {
+      await automation.onAcceptCV(id, note).catch((err) => {
+        console.error('onAcceptCV automation failed:', err.message);
+      });
+    } else if (action === 'reject-cv') {
+      await automation.onRejectCV(id, note).catch((err) => {
+        console.error('onRejectCV automation failed:', err.message);
+      });
+    } else if (action === 'accept-interview') {
+      await automation.onAcceptInterview(id, note).catch((err) => {
+        console.error('onAcceptInterview automation failed:', err.message);
+      });
+    } else if (action === 'reject-interview') {
+      await automation.onRejectInterview(id, note).catch((err) => {
+        console.error('onRejectInterview automation failed:', err.message);
+      });
+    } else if (action === 'mark-interview-done') {
+      // No automation needed after marking interview done - just wait for HR decision
+    }
+
     return res.status(200).json({
       success: true,
       data: {
@@ -72,6 +98,69 @@ export async function getHistory(req: Request<{ id: string }>, res: Response) {
   } catch (err: any) {
     if (err.message === 'CANDIDATE_NOT_FOUND') {
       return res.status(404).json({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found' } });
+    }
+    return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
+  }
+}
+
+export async function scheduleInterview(req: Request<{ id: string }>, res: Response) {
+  const { id } = req.params;
+  const { date, time, location, meetingLink, note } = req.body ?? {};
+
+  if (!date || !time || !location) {
+    return res.status(400).json({ success: false, error: { code: 'MISSING_FIELDS', message: 'date, time, and location are required' } });
+  }
+
+  try {
+    await automation.scheduleInterview(id, { date, time, location, meetingLink }, note);
+    return res.status(200).json({ success: true, data: { candidateId: id, message: 'Interview scheduled' } });
+  } catch (err: any) {
+    if (err.message === 'CANDIDATE_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found' } });
+    }
+    return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
+  }
+}
+
+export async function confirmInterview(req: Request<{ id: string }>, res: Response) {
+  const { id } = req.params;
+  const { email } = req.body ?? {};
+
+  if (!email) {
+    return res.status(400).json({ success: false, error: { code: 'MISSING_EMAIL', message: 'email is required' } });
+  }
+
+  try {
+    await automation.confirmInterview(id, email);
+    return res.status(200).json({ success: true, data: { candidateId: id, message: 'Interview confirmed' } });
+  } catch (err: any) {
+    if (err.message === 'CANDIDATE_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found' } });
+    }
+    if (err.message === 'UNAUTHORIZED') {
+      return res.status(403).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Email does not match' } });
+    }
+    return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
+  }
+}
+
+export async function requestReschedule(req: Request<{ id: string }>, res: Response) {
+  const { id } = req.params;
+  const { email, reason } = req.body ?? {};
+
+  if (!email) {
+    return res.status(400).json({ success: false, error: { code: 'MISSING_EMAIL', message: 'email is required' } });
+  }
+
+  try {
+    await automation.requestReschedule(id, email, reason);
+    return res.status(200).json({ success: true, data: { candidateId: id, message: 'Reschedule request submitted' } });
+  } catch (err: any) {
+    if (err.message === 'CANDIDATE_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: { code: 'CANDIDATE_NOT_FOUND', message: 'Candidate not found' } });
+    }
+    if (err.message === 'UNAUTHORIZED') {
+      return res.status(403).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Email does not match' } });
     }
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }

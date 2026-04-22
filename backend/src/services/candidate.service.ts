@@ -71,6 +71,7 @@ export async function listCandidates(filters: { jobId?: string; status?: string;
     jobTitle: c.job.title,
     status: c.status,
     glmScore: c.glmScore,
+    createdAt: c.createdAt,
     appliedAt: c.createdAt,
   }));
 
@@ -102,4 +103,19 @@ export async function getCvFilePath(id: string) {
   if (!fs.existsSync(absPath)) throw new Error('CV_FILE_NOT_FOUND');
 
   return absPath;
+}
+
+export async function deleteCandidate(id: string) {
+  const candidate = await prisma.candidate.findUnique({ where: { id } });
+  if (!candidate) throw new Error('CANDIDATE_NOT_FOUND');
+
+  if (candidate.cvFilePath) {
+    const absPath = path.resolve(candidate.cvFilePath);
+    if (fs.existsSync(absPath)) {
+      fs.unlinkSync(absPath);
+    }
+  }
+
+  await prisma.statusHistory.deleteMany({ where: { candidateId: id } });
+  await prisma.candidate.delete({ where: { id } });
 }
