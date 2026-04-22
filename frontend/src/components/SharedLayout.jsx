@@ -14,7 +14,7 @@ const navItems = [
   },
   {
     to: '/jobs',
-    label: 'Requirements',
+    label: 'Jobs',
     icon: (
       <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
         <path fill="currentColor" d="M5 5h10v2H5V5Zm0 4h7v2H5V9Zm0 4h10v2H5v-2Zm10.2-4.4 1.4 1.4-3.4 3.4-1.7-1.7 1.4-1.4.3.3 2-2Z" />
@@ -31,11 +31,11 @@ const navItems = [
     ),
   },
   {
-    to: '/dashboard',
-    label: 'Analysis',
+    to: '/shortlist',
+    label: 'Ranked Shortlist',
     icon: (
       <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
-        <path fill="currentColor" d="M4 16V9h3v7H4Zm4.5 0V4h3v12h-3Zm4.5 0v-5h3v5h-3Z" />
+        <path fill="currentColor" d="M10 2l2.4 4.8L18 7.6l-4 3.9.9 5.5L10 14.5l-4.9 2.5.9-5.5-4-3.9 5.6-.8L10 2Z" />
       </svg>
     ),
   },
@@ -70,26 +70,14 @@ const SharedLayout = () => {
             </Link>
           </div>
 
-          <div className="px-4 py-5">
-            <Link
-              to="/jobs"
-              className="flex h-11 items-center justify-center gap-2 rounded-md bg-black px-3 text-sm font-extrabold text-white transition hover:bg-zinc-800 focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
-            >
-              <span className="text-lg leading-none text-white">+</span>
-              <span className="text-white">Post New Job</span>
-            </Link>
-          </div>
-
-          <nav className="grid gap-1 px-4">
+          <nav className="grid gap-1 px-4 py-5">
             {navItems.map((item) => (
               <NavLink
                 key={`${item.label}-${item.to}`}
                 to={item.to}
                 className={({ isActive }) =>
                   `flex items-center gap-3 rounded-md px-3 py-2.5 text-sm font-semibold transition ${
-                    isActive && item.label !== 'Analysis'
-                      ? 'bg-zinc-100 text-black'
-                      : 'text-zinc-600 hover:bg-zinc-50 hover:text-black'
+                    isActive ? 'bg-zinc-100 text-black' : 'text-zinc-600 hover:bg-zinc-50 hover:text-black'
                   }`
                 }
               >
@@ -140,7 +128,7 @@ const SharedLayout = () => {
               <div className="flex items-center gap-2">
                 <Link
                   to="/jobs"
-                  className="grid h-9 w-9 place-items-center rounded-md bg-black text-white transition hover:bg-zinc-800"
+                  className="primary-cta grid h-9 w-9 place-items-center rounded-md transition"
                   aria-label="Post new job"
                   title="Post new job"
                 >
@@ -167,9 +155,7 @@ const SharedLayout = () => {
                   to={item.to}
                   className={({ isActive }) =>
                     `inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-bold transition ${
-                      isActive && item.label !== 'Analysis'
-                        ? 'bg-black text-white'
-                        : 'border border-zinc-200 bg-white text-zinc-600 hover:text-black'
+                      isActive ? 'bg-black text-white' : 'border border-zinc-200 bg-white text-zinc-600 hover:text-black'
                     }`
                   }
                 >

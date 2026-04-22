@@ -2,10 +2,10 @@ import { prisma } from '../config/prisma';
 import { STATES, TERMINAL_STATES, State } from './states';
 
 // Maps each HR action to the required current state and resulting new state
-const TRANSITIONS: Record<string, { from: State; to: State; event: string }> = {
+const TRANSITIONS: Record<string, { from: State | State[]; to: State; event: string }> = {
   'accept-cv': {
     from: STATES.CV_UNDER_REVIEW,
-    to: STATES.INTERVIEW_PENDING,
+    to: STATES.AI_INTERVIEW_INVITED,
     event: 'HR_ACCEPT_CV',
   },
   'reject-cv': {
@@ -14,12 +14,12 @@ const TRANSITIONS: Record<string, { from: State; to: State; event: string }> = {
     event: 'HR_REJECT_CV',
   },
   'schedule-interview': {
-    from: STATES.INTERVIEW_PENDING,
+    from: [STATES.INTERVIEW_PENDING, STATES.INTERVIEW_RESCHEDULE_REQUESTED],
     to: STATES.INTERVIEW_SCHEDULED,
     event: 'HR_SCHEDULE_INTERVIEW',
   },
   'mark-interview-done': {
-    from: STATES.INTERVIEW_CONFIRMED,
+    from: [STATES.INTERVIEW_SCHEDULED, STATES.INTERVIEW_CONFIRMED],
     to: STATES.INTERVIEW_DONE,
     event: 'HR_MARK_INTERVIEW_DONE',
   },
@@ -33,12 +33,27 @@ const TRANSITIONS: Record<string, { from: State; to: State; event: string }> = {
     to: STATES.INTERVIEW_REJECTED,
     event: 'HR_REJECT_INTERVIEW',
   },
+  'advance-to-human-interview': {
+    from: STATES.AI_INTERVIEW_SCORED,
+    to: STATES.INTERVIEW_PENDING,
+    event: 'HR_ADVANCE_TO_HUMAN_INTERVIEW',
+  },
+  'reject-after-ai': {
+    from: STATES.AI_INTERVIEW_SCORED,
+    to: STATES.INTERVIEW_REJECTED,
+    event: 'HR_REJECT_AFTER_AI_INTERVIEW',
+  },
+  'override-auto-screen-pass': {
+    from: STATES.CV_REJECTED,
+    to: STATES.AI_INTERVIEW_INVITED,
+    event: 'HR_OVERRIDE_AUTO_SCREEN_PASS',
+  },
 };
 
 // States from which retry is allowed and what they reset to
 const RETRY_MAP: Partial<Record<State, State>> = {
   [STATES.CV_PARSE_FAILED]: STATES.CV_PARSING,
-  [STATES.INTERVIEW_INVITE_FAILED]: STATES.INTERVIEW_PENDING,
+  [STATES.INTERVIEW_INVITE_FAILED]: STATES.AI_INTERVIEW_INVITED,
   [STATES.FAILED]: STATES.CV_PARSING,
 };
 
@@ -70,7 +85,8 @@ export async function applyAction(
   } else {
     const transition = TRANSITIONS[action];
     if (!transition) throw new Error('INVALID_ACTION');
-    if (currentStatus !== transition.from) throw new Error('INVALID_STATE_FOR_ACTION');
+    const allowedFrom = Array.isArray(transition.from) ? transition.from : [transition.from];
+    if (!allowedFrom.includes(currentStatus)) throw new Error('INVALID_STATE_FOR_ACTION');
     previousStatus = currentStatus;
     newStatus = transition.to;
     event = transition.event;

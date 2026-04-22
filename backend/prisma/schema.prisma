@@ -16,15 +16,18 @@ model User {
 }
 
 model Job {
-  id           String      @id @default(uuid())
-  title        String
-  department   String
-  description  String
-  requirements Json     @default("[]")
-  location     String
-  status       JobStatus   @default(OPEN)
-  createdAt    DateTime    @default(now())
-  candidates   Candidate[]
+  id                  String             @id @default(uuid())
+  title               String
+  department          String
+  description         String
+  requirements        Json               @default("[]")
+  location            String
+  autoScreenThreshold Int                @default(60)
+  shortlistSize       Int                @default(10)
+  status              JobStatus          @default(OPEN)
+  createdAt           DateTime           @default(now())
+  candidates          Candidate[]
+  interviewSessions   InterviewSession[]
 }
 
 model Candidate {
@@ -38,13 +41,19 @@ model Candidate {
   status                CandidateStatus @default(APPLIED)
   glmAnalysis           Json?
   glmScore              Int?
-  interviewDate        String?
-  interviewTime        String?
-  interviewLocation    String?
-  interviewMeetingLink String?
+  autoScreenDecision    ScreeningDecision?
+  autoScreenNotes       Json?
+  interviewDate         String?
+  interviewTime         String?
+  interviewLocation     String?
+  interviewMeetingLink  String?
+  aiInterviewScore      Float?
+  aiInterviewRank       Int?
+  isShortlisted         Boolean         @default(false)
   createdAt             DateTime        @default(now())
   updatedAt             DateTime        @updatedAt
   history               StatusHistory[]
+  interviewSessions     InterviewSession[]
 }
 
 model StatusHistory {
@@ -57,6 +66,76 @@ model StatusHistory {
   triggeredBy String?
   metadata    Json?
   createdAt   DateTime  @default(now())
+}
+
+model InterviewSession {
+  id             String                 @id @default(uuid())
+  candidateId    String
+  jobId          String
+  status         InterviewSessionStatus @default(INVITED)
+  inviteToken    String                 @unique
+  startedAt      DateTime?
+  completedAt    DateTime?
+  scoredAt       DateTime?
+  overallScore   Float?
+  rankPosition   Int?
+  isShortlisted  Boolean                @default(false)
+  scoreBreakdown Json?
+  metadata       Json?
+  createdAt      DateTime               @default(now())
+  updatedAt      DateTime               @updatedAt
+  candidate      Candidate              @relation(fields: [candidateId], references: [id])
+  job            Job                    @relation(fields: [jobId], references: [id])
+  questions      InterviewQuestion[]
+  answers        CandidateAnswer[]
+  proctorEvents  ProctorEvent[]
+}
+
+model InterviewQuestion {
+  id             String                @id @default(uuid())
+  sessionId      String
+  session        InterviewSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  type           InterviewQuestionType
+  sequence       Int
+  prompt         String
+  choices        Json?
+  expectedAnswer Json?
+  metadata       Json?
+  createdAt      DateTime              @default(now())
+  answers        CandidateAnswer[]
+
+  @@unique([sessionId, sequence])
+}
+
+model CandidateAnswer {
+  id                  String            @id @default(uuid())
+  sessionId           String
+  questionId          String
+  rawAnswer           String?
+  selectedOption      String?
+  codeSubmission      String?
+  programmingLanguage String?
+  executionResult     Json?
+  aiScore             Float?
+  aiReasoning         String?
+  metadata            Json?
+  createdAt           DateTime          @default(now())
+  updatedAt           DateTime          @updatedAt
+  session             InterviewSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  question            InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@unique([sessionId, questionId])
+}
+
+model ProctorEvent {
+  id         String           @id @default(uuid())
+  sessionId  String
+  type       String
+  severity   Int              @default(1)
+  occurredAt DateTime         @default(now())
+  metadata   Json?
+  createdAt  DateTime         @default(now())
+  session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
@@ -75,6 +154,10 @@ enum CandidateStatus {
   CV_PARSE_FAILED
   CV_UNDER_REVIEW
   CV_REJECTED
+  AI_INTERVIEW_INVITED
+  AI_INTERVIEW_IN_PROGRESS
+  AI_INTERVIEW_COMPLETED
+  AI_INTERVIEW_SCORED
   INTERVIEW_PENDING
   INTERVIEW_SCHEDULED
   INTERVIEW_INVITE_FAILED
@@ -87,4 +170,23 @@ enum CandidateStatus {
   FAILED
   INTERVIEW_CONFIRMED
   INTERVIEW_RESCHEDULE_REQUESTED
+}
+
+enum ScreeningDecision {
+  PASS
+  REVIEW
+  REJECT
+}
+
+enum InterviewSessionStatus {
+  INVITED
+  IN_PROGRESS
+  COMPLETED
+  SCORED
+}
+
+enum InterviewQuestionType {
+  DSA
+  MCQ
+  BEHAVIORAL
 }

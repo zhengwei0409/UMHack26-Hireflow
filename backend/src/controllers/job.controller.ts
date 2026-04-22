@@ -2,7 +2,15 @@ import { Request, Response } from 'express';
 import * as jobService from '../services/job.service';
 
 export async function createJob(req: Request, res: Response) {
-  const { title, department, description, requirements, location } = req.body;
+  const {
+    title,
+    department,
+    description,
+    requirements,
+    location,
+    autoScreenThreshold,
+    shortlistSize,
+  } = req.body;
 
   if (!title || !department || !description || !location) {
     return res.status(400).json({
@@ -19,7 +27,15 @@ export async function createJob(req: Request, res: Response) {
   }
 
   try {
-    const job = await jobService.createJob({ title, department, description, requirements, location });
+    const job = await jobService.createJob({
+      title,
+      department,
+      description,
+      requirements,
+      location,
+      autoScreenThreshold,
+      shortlistSize,
+    });
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
     return res.status(201).json({
       success: true,
@@ -64,10 +80,44 @@ export async function getJob(req: Request<{ id: string }>, res: Response) {
 
 export async function updateJob(req: Request<{ id: string }>, res: Response) {
   const { id } = req.params;
-  const { title, department, description, requirements, location } = req.body;
+  const {
+    title,
+    department,
+    description,
+    requirements,
+    location,
+    autoScreenThreshold,
+    shortlistSize,
+  } = req.body;
 
   try {
-    const job = await jobService.updateJob(id, { title, department, description, requirements, location });
+    const job = await jobService.updateJob(id, {
+      title,
+      department,
+      description,
+      requirements,
+      location,
+      autoScreenThreshold,
+      shortlistSize,
+    });
+    return res.status(200).json({ success: true, data: job });
+  } catch (err: any) {
+    if (err.message === 'JOB_NOT_FOUND') {
+      return res.status(404).json({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found' } });
+    }
+    return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
+  }
+}
+
+export async function updatePrescreenConfig(req: Request<{ id: string }>, res: Response) {
+  const { id } = req.params;
+  const { autoScreenThreshold, shortlistSize } = req.body ?? {};
+
+  try {
+    const job = await jobService.updateJob(id, {
+      autoScreenThreshold,
+      shortlistSize,
+    });
     return res.status(200).json({ success: true, data: job });
   } catch (err: any) {
     if (err.message === 'JOB_NOT_FOUND') {
