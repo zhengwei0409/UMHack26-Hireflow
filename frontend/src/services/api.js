@@ -65,6 +65,20 @@ export const jobs = {
       body: JSON.stringify(data),
     }).then(handleResponse),
 
+  updatePrescreenConfig: (id, data) =>
+    fetch(`${API_BASE}/jobs/${id}/prescreen-config`, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  shortlist: (id, params = {}) => {
+    const query = new URLSearchParams(params).toString();
+    return fetch(`${API_BASE}/jobs/${id}/shortlist${query ? `?${query}` : ''}`, {
+      headers: headers(),
+    }).then(handleResponse);
+  },
+
   delete: (id) =>
     fetch(`${API_BASE}/jobs/${id}`, {
       method: 'DELETE',
@@ -94,6 +108,9 @@ export const candidates = {
   history: (id) =>
     fetch(`${API_BASE}/candidates/${id}/history`, { headers: headers() }).then(handleResponse),
 
+  getAiReport: (id) =>
+    fetch(`${API_BASE}/candidates/${id}/ai-report`, { headers: headers() }).then(handleResponse),
+
   acceptCv: (id, note) =>
     fetch(`${API_BASE}/candidates/${id}/actions/accept-cv`, {
       method: 'POST',
@@ -117,6 +134,20 @@ export const candidates = {
 
   rejectInterview: (id, note) =>
     fetch(`${API_BASE}/candidates/${id}/actions/reject-interview`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ note }),
+    }).then(handleResponse),
+
+  advanceToHumanInterview: (id, note) =>
+    fetch(`${API_BASE}/candidates/${id}/actions/advance-to-human-interview`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ note }),
+    }).then(handleResponse),
+
+  rejectAfterAi: (id, note) =>
+    fetch(`${API_BASE}/candidates/${id}/actions/reject-after-ai`, {
       method: 'POST',
       headers: headers(),
       body: JSON.stringify({ note }),
@@ -167,4 +198,56 @@ export const dashboard = {
     fetch(`${API_BASE}/dashboard`, { headers: headers() }).then(handleResponse),
 };
 
-export default { auth, jobs, candidates, dashboard };
+export const interviews = {
+  get: (token) =>
+    fetch(`${API_BASE}/interviews/session/${token}`).then(handleResponse),
+
+  start: (token) =>
+    fetch(`${API_BASE}/interviews/session/${token}/start`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).then(handleResponse),
+
+  saveAnswer: (token, data) =>
+    fetch(`${API_BASE}/interviews/session/${token}/answers`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  runCode: (token, data) =>
+    fetch(`${API_BASE}/interviews/session/${token}/code-exec`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  logProctorEvents: (token, events) =>
+    fetch(`${API_BASE}/interviews/session/${token}/proctor-events`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ events }),
+    }).then(handleResponse),
+
+  submit: (token) =>
+    fetch(`${API_BASE}/interviews/session/${token}/submit`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+    }).then(handleResponse),
+
+  shortlist: (jobId) => {
+    const query = jobId ? `?${new URLSearchParams({ jobId }).toString()}` : '';
+    return fetch(`${API_BASE}/interviews/ranked-shortlist${query}`, {
+      headers: headers(),
+    }).then(handleResponse);
+  },
+
+  updateShortlist: (sessionId, shortlisted) =>
+    fetch(`${API_BASE}/interviews/ranked-shortlist/${sessionId}`, {
+      method: 'PATCH',
+      headers: headers(),
+      body: JSON.stringify({ shortlisted }),
+    }).then(handleResponse),
+};
+
+export default { auth, jobs, candidates, dashboard, interviews };

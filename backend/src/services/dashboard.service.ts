@@ -1,11 +1,13 @@
 import { prisma } from '../config/prisma';
 
 export async function getDashboardData() {
-  const [openRoles, totalApplicants, screenedResumes, nextInterviews] = await Promise.all([
+  const [openRoles, totalApplicants, screenedResumes, nextInterviews, aiScored, shortlisted] = await Promise.all([
     prisma.job.count({ where: { status: 'OPEN' } }),
-    prisma.candidate.count(),
-    prisma.candidate.count({ where: { NOT: { status: 'APPLIED' } } }),
-    prisma.candidate.count({ where: { status: { in: ['INTERVIEW_PENDING', 'INTERVIEW_SCHEDULED'] } } }),
+    prisma.candidate.count({ where: { job: { status: 'OPEN' } } }),
+    prisma.candidate.count({ where: { job: { status: 'OPEN' }, NOT: { status: 'APPLIED' } } }),
+    prisma.candidate.count({ where: { job: { status: 'OPEN' }, status: { in: ['INTERVIEW_PENDING', 'INTERVIEW_SCHEDULED'] } } }),
+    prisma.candidate.count({ where: { job: { status: 'OPEN' }, status: 'AI_INTERVIEW_SCORED' } }),
+    prisma.candidate.count({ where: { job: { status: 'OPEN' }, isShortlisted: true } }),
   ]);
 
   const jobRows = await prisma.job.findMany({
@@ -23,6 +25,8 @@ export async function getDashboardData() {
       id: job.id,
       title: job.title,
       department: job.department,
+      location: job.location,
+      createdAt: job.createdAt,
       applicants,
       screened,
       accepted,
@@ -36,6 +40,8 @@ export async function getDashboardData() {
       totalApplicants,
       screenedResumes,
       nextInterviews,
+      aiScored,
+      shortlisted,
     },
     positions,
   };

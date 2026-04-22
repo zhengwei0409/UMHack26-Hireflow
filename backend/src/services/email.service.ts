@@ -10,9 +10,9 @@ const SMTP_PASS = process.env.SMTP_PASS;
 const FROM_EMAIL = process.env.FROM_EMAIL || 'noreply@hireflow.com';
 const COMPANY_NAME = process.env.COMPANY_NAME || 'HireFlow';
 
-let transporter: nodemailer.Transporter | null = null;
+let transporter: any = null;
 
-function getTransporter(): nodemailer.Transporter {
+function getTransporter(): any {
   if (!transporter) {
     if (!SMTP_HOST || !SMTP_USER || !SMTP_PASS) {
       console.warn('Email not configured - emails will be logged only');
@@ -81,6 +81,65 @@ export async function sendInterviewInvite(
       <p>Our HR team will contact you shortly to schedule the interview date and time.</p>
       
       <p>Best regards,<br/>${COMPANY_NAME} HR Team</p>
+    </div>
+  `;
+
+  return sendEmail({ to: candidate.email, subject, html });
+}
+
+export async function sendAiInterviewInvite(
+  candidate: { fullName: string; email: string },
+  job: { title: string },
+  interviewLink: string
+): Promise<boolean> {
+  const subject = `AI Technical Interview - ${job.title}`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Dear ${candidate.fullName},</h2>
+      <p>Thank you for applying for the <strong>${job.title}</strong> role.</p>
+      <p>Your application has progressed to our AI pre-screen interview. This short session includes coding, MCQ, and behavioral questions so we can evaluate real skill signals instead of CV keywords alone.</p>
+
+      <div style="background: #f5f5f5; padding: 20px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin: 0 0 12px;"><strong>Interview link</strong></p>
+        <a href="${interviewLink}" style="background: #2563eb; color: white; padding: 12px 20px; text-decoration: none; border-radius: 6px; display: inline-block;">Start AI Interview</a>
+      </div>
+
+      <p>This link is unique to you. Please complete the interview in one sitting when you are ready.</p>
+      <p>Best regards,<br/>${COMPANY_NAME} Hiring Team</p>
+    </div>
+  `;
+
+  return sendEmail({ to: candidate.email, subject, html });
+}
+
+export async function sendAIInterviewInvite(
+  candidate: { fullName: string; email: string },
+  job: { title: string },
+  interviewToken: string,
+): Promise<boolean> {
+  const subject = `AI Interview Invitation - ${job.title} Position`;
+  const appUrl = process.env.APP_URL || 'http://localhost:5173';
+  const interviewUrl = `${appUrl}/interview/${interviewToken}`;
+
+  const html = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Dear ${candidate.fullName},</h2>
+      <p>You have advanced to the AI prescreen stage for the <strong>${job.title}</strong> position.</p>
+
+      <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 20px 0;">
+        <p style="margin-top: 0;"><strong>What to expect</strong></p>
+        <p style="margin-bottom: 0;">You will complete coding, MCQ, and behavioral questions in one guided session. Please keep one uninterrupted browser session open while you work.</p>
+      </div>
+
+      <p>
+        <a href="${interviewUrl}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Start AI Interview</a>
+      </p>
+
+      <p>If the button does not work, open this link directly:</p>
+      <p><a href="${interviewUrl}">${interviewUrl}</a></p>
+
+      <p>Best regards,<br/>${COMPANY_NAME} Hiring Team</p>
     </div>
   `;
 

@@ -6,6 +6,8 @@ export async function createJob(data: {
   description: string;
   requirements: string[];
   location: string;
+  autoScreenThreshold?: number;
+  shortlistSize?: number;
 }) {
   const job = await prisma.job.create({
     data: {
@@ -14,6 +16,8 @@ export async function createJob(data: {
       description: data.description,
       requirements: data.requirements,
       location: data.location,
+      autoScreenThreshold: data.autoScreenThreshold ?? 60,
+      shortlistSize: data.shortlistSize ?? 10,
     },
     select: { id: true, title: true, createdAt: true },
   });
@@ -45,7 +49,15 @@ export async function getJobById(id: string) {
 
 export async function updateJob(
   id: string,
-  data: Partial<{ title: string; department: string; description: string; requirements: string[]; location: string }>
+  data: Partial<{
+    title: string;
+    department: string;
+    description: string;
+    requirements: string[];
+    location: string;
+    autoScreenThreshold: number;
+    shortlistSize: number;
+  }>
 ) {
   const existing = await prisma.job.findUnique({ where: { id } });
   if (!existing) throw new Error('JOB_NOT_FOUND');

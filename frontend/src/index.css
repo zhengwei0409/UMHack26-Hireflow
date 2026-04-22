@@ -439,6 +439,27 @@ a {
   font-weight: 700;
 }
 
+.primary-cta {
+  background: #111111;
+  color: #ffffff;
+  border: 1px solid #111111;
+  box-shadow: 0 10px 24px rgba(17, 17, 17, 0.18);
+}
+
+.primary-cta:hover {
+  background: #262626;
+  border-color: #262626;
+}
+
+.primary-cta:focus-visible {
+  outline: 2px solid #111111;
+  outline-offset: 2px;
+}
+
+.primary-cta:disabled {
+  box-shadow: none;
+}
+
 .app-body {
   display: grid;
   grid-template-columns: 280px 1fr;
