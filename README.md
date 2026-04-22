@@ -227,3 +227,7 @@ npm run dev
 | [docs/backend.md](docs/backend.md) | Full API reference |
 | [docs/workflow-states.md](docs/workflow-states.md) | State machine states & transitions |
 | [docs/learning-log.md](docs/learning-log.md) | Key concepts explained |
+
+
+## Note
+We have not get the GLM API key yet.

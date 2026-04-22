@@ -1,5 +1,5 @@
 // Owner: AI/ML Engineer
-// DeepSeek API integration for CV parsing and offer letter generation.
+// LLM integration with deterministic fallbacks so the MVP still runs without external keys.
 
 import fs from 'fs';
 import path from 'path';
@@ -20,24 +20,67 @@ export interface OfferLetter {
   body: string;
 }
 
+export interface InterviewQuestionDraft {
+  type: 'DSA' | 'MCQ' | 'BEHAVIORAL';
+  prompt: string;
+  choices?: string[];
+  expectedAnswer?: string | { answer: string; rubric?: string; testCases?: Array<{ input: string; expectedOutput: string }> };
+  metadata?: Record<string, unknown>;
+}
+
+export interface BehavioralScore {
+  score: number;
+  reasoning: string;
+  strengths: string[];
+  risks: string[];
+}
+
 interface GLMMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
-async function callLLM(messages: GLMMessage[], temperature = 0.7): Promise<string> {
+function clampScore(score: number) {
+  return Math.min(100, Math.max(0, Math.round(score)));
+}
+
+function normalizeWords(value: string) {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, ' ')
+    .split(/\s+/)
+    .filter((word) => word.length >= 3);
+}
+
+function extractJsonFromResponse(text: string): any {
+  const jsonMatch =
+    text.match(/```json\n([\s\S]*?)\n```/) ||
+    text.match(/```\n([\s\S]*?)\n```/) ||
+    text.match(/\{[\s\S]*\}/) ||
+    text.match(/\[[\s\S]*\]/);
+
+  if (!jsonMatch) return null;
+
+  try {
+    return JSON.parse(jsonMatch[1] || jsonMatch[0]);
+  } catch {
+    return null;
+  }
+}
+
+async function callLLM(messages: GLMMessage[], temperature = 0.5): Promise<string | null> {
   if (!DEEPSEEK_API_KEY) {
-    throw new Error('DEEPSEEK_API_KEY not configured');
+    return null;
   }
 
   const response = await fetch(`${DEEPSEEK_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'Authorization': `Bearer ${DEEPSEEK_API_KEY}`,
+      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'deepseek-chat',
+      model: 'llama-3.3-70b-versatile',
       messages,
       temperature,
     }),
@@ -48,109 +91,8 @@ async function callLLM(messages: GLMMessage[], temperature = 0.7): Promise<strin
     throw new Error(`DeepSeek API error: ${response.status} - ${error}`);
   }
 
-  const data = await response.json() as { choices: Array<{ message: { content: string } }> };
-  return data.choices[0].message.content;
-}
-
-function extractJsonFromResponse(text: string): any {
-  const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/```\n([\s\S]*?)\n```/) || text.match(/\{[\s\S]*\}/);
-  if (jsonMatch) {
-    try {
-      return JSON.parse(jsonMatch[1] || jsonMatch[0]);
-    } catch {
-      return null;
-    }
-  }
-  return null;
-}
-
-export async function parseCV(cvFilePath: string, jobDescription: string): Promise<GLMAnalysis> {
-  let cvText: string;
-
-  const ext = path.extname(cvFilePath).toLowerCase();
-  if (ext === '.pdf') {
-    cvText = await extractTextFromPDF(cvFilePath);
-  } else if (ext === '.docx') {
-    cvText = await extractTextFromDOCX(cvFilePath);
-  } else {
-    cvText = fs.readFileSync(cvFilePath, 'utf-8');
-  }
-
-  const prompt = `You are an HR analyst evaluating a candidate's CV for a job.
-Job Description:
-${jobDescription}
-
-Candidate CV:
-${cvText}
-
-Analyze the CV and return a JSON object with exactly this structure:
-{
-  "score": number (0-100),
-  "strengths": ["string"],
-  "weaknesses": ["string"],
-  "recommendation": "ACCEPT" or "REJECT",
-  "summary": "A brief summary paragraph"
-}
-
-Only return the JSON, no other text.`;
-
-  try {
-    const response = await callLLM([{ role: 'user', content: prompt }], 0.3);
-    const parsed = extractJsonFromResponse(response);
-
-    if (parsed && typeof parsed.score === 'number') {
-      return {
-        score: Math.min(100, Math.max(0, parsed.score)),
-        strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
-        weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
-        recommendation: parsed.recommendation === 'REJECT' ? 'REJECT' : 'ACCEPT',
-        summary: parsed.summary || '',
-      };
-    }
-
-    throw new Error('Invalid LLM response format');
-  } catch (error) {
-    console.error('LLM parseCV error:', error);
-    throw new Error('CV_ANALYSIS_FAILED');
-  }
-}
-
-export async function generateOfferLetter(
-  candidateInfo: { fullName: string; email: string },
-  jobInfo: { title: string; department: string; location: string; salary?: string }
-): Promise<OfferLetter> {
-  const prompt = `Generate a professional job offer letter with the following details:
-
-Candidate: ${candidateInfo.fullName}
-Position: ${jobInfo.title}
-Department: ${jobInfo.department}
-Location: ${jobInfo.location}
-${jobInfo.salary ? `Salary: ${jobInfo.salary}` : ''}
-
-Return a JSON object with exactly this structure:
-{
-  "subject": "string - email subject line",
-  "body": "string - full email body in a professional tone"
-}
-
-Only return the JSON, no other text.`;
-
-  try {
-    const response = await callLLM([{ role: 'user', content: prompt }], 0.5);
-    const parsed = extractJsonFromResponse(response);
-
-    if (parsed && parsed.subject && parsed.body) {
-      return {
-        subject: parsed.subject,
-        body: parsed.body,
-      };
-    }
-
-    throw new Error('Invalid LLM response format');
-  } catch (error) {
-    console.error('LLM generateOfferLetter error:', error);
-    throw new Error('OFFER_LETTER_GENERATION_FAILED');
-  }
+  const data = (await response.json()) as { choices: Array<{ message: { content: string } }> };
+  return data.choices[0]?.message?.content ?? null;
 }
 
 async function extractTextFromPDF(filePath: string): Promise<string> {
@@ -164,4 +106,277 @@ async function extractTextFromDOCX(filePath: string): Promise<string> {
   const mammoth = (await import('mammoth')).default;
   const result = await mammoth.extractRawText({ path: filePath });
   return result.value;
+}
+
+async function loadTextFromCv(cvFilePath: string): Promise<string> {
+  const ext = path.extname(cvFilePath).toLowerCase();
+  if (ext === '.pdf') {
+    return extractTextFromPDF(cvFilePath);
+  }
+  if (ext === '.docx') {
+    return extractTextFromDOCX(cvFilePath);
+  }
+  return fs.readFileSync(cvFilePath, 'utf-8');
+}
+
+function fallbackCvAnalysis(cvText: string, jobDescription: string): GLMAnalysis {
+  const jobWords = Array.from(new Set(normalizeWords(jobDescription)));
+  const cvWords = new Set(normalizeWords(cvText));
+  const matchedWords = jobWords.filter((word) => cvWords.has(word));
+  const overlapRatio = jobWords.length > 0 ? matchedWords.length / jobWords.length : 0.5;
+  const score = clampScore(35 + overlapRatio * 55 + Math.min(cvText.length / 1000, 10));
+
+  const strengths = matchedWords.slice(0, 5).map((word) => `Mentions relevant skill or concept: ${word}`);
+  const missingWords = jobWords.filter((word) => !cvWords.has(word)).slice(0, 4);
+  const weaknesses = missingWords.map((word) => `No clear evidence for requirement: ${word}`);
+
+  return {
+    score,
+    strengths: strengths.length > 0 ? strengths : ['General alignment with the role was detected.'],
+    weaknesses: weaknesses.length > 0 ? weaknesses : ['Few obvious gaps were detected from the CV text alone.'],
+    recommendation: score >= 60 ? 'ACCEPT' : 'REJECT',
+    summary:
+      score >= 60
+        ? 'The CV appears to cover a useful portion of the job requirements and should continue to the next screening step.'
+        : 'The CV shows partial overlap with the job requirements, but important skill signals are still weak or missing.',
+  };
+}
+
+export async function parseCV(cvFilePath: string, jobDescription: string): Promise<GLMAnalysis> {
+  const cvText = await loadTextFromCv(cvFilePath);
+
+  const prompt = `You are an HR analyst evaluating a candidate's CV for a software role.
+Job Description:
+${jobDescription}
+
+Candidate CV:
+${cvText}
+
+Return JSON only with this exact structure:
+{
+  "score": number,
+  "strengths": ["string"],
+  "weaknesses": ["string"],
+  "recommendation": "ACCEPT" or "REJECT",
+  "summary": "string"
+}`;
+
+  try {
+    const response = await callLLM([{ role: 'user', content: prompt }], 0.2);
+    const parsed = response ? extractJsonFromResponse(response) : null;
+
+    if (parsed && typeof parsed.score === 'number') {
+      return {
+        score: clampScore(parsed.score),
+        strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+        weaknesses: Array.isArray(parsed.weaknesses) ? parsed.weaknesses : [],
+        recommendation: parsed.recommendation === 'REJECT' ? 'REJECT' : 'ACCEPT',
+        summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+      };
+    }
+  } catch (error) {
+    console.error('LLM parseCV error, falling back to heuristic analysis:', error);
+  }
+
+  return fallbackCvAnalysis(cvText, jobDescription);
+}
+
+export async function generateOfferLetter(
+  candidateInfo: { fullName: string; email: string },
+  jobInfo: { title: string; department: string; location: string; salary?: string }
+): Promise<OfferLetter> {
+  const prompt = `Generate a professional job offer letter and return JSON only:
+{
+  "subject": "string",
+  "body": "string"
+}
+
+Candidate: ${candidateInfo.fullName}
+Position: ${jobInfo.title}
+Department: ${jobInfo.department}
+Location: ${jobInfo.location}
+${jobInfo.salary ? `Salary: ${jobInfo.salary}` : ''}`;
+
+  try {
+    const response = await callLLM([{ role: 'user', content: prompt }], 0.4);
+    const parsed = response ? extractJsonFromResponse(response) : null;
+    if (parsed?.subject && parsed?.body) {
+      return {
+        subject: parsed.subject,
+        body: parsed.body,
+      };
+    }
+  } catch (error) {
+    console.error('LLM generateOfferLetter error, using fallback:', error);
+  }
+
+  return {
+    subject: `Offer Letter - ${jobInfo.title}`,
+    body: `We are pleased to offer you the ${jobInfo.title} role in ${jobInfo.department} based in ${jobInfo.location}. Please reply to this email and our HR team will coordinate the next steps.`,
+  };
+}
+
+function fallbackInterviewQuestions(jobTitle: string, requirements: string[], seniorityHint: string): InterviewQuestionDraft[] {
+  const focusArea = requirements[0] || 'data structures and algorithms';
+  const seniority = seniorityHint.toLowerCase().includes('senior') ? 'senior' : 'junior';
+
+  return [
+    {
+      type: 'DSA',
+      prompt: `Build a function that returns the first non-repeating character in a string for a ${jobTitle} role. Explain the time and space complexity in a short note.`,
+      expectedAnswer: {
+        answer: 'Any correct implementation using counting or indexed frequency tracking.',
+        rubric: 'Prefer linear-time reasoning and clean edge-case handling.',
+        testCases: [
+          { input: 'leetcode', expectedOutput: 'l' },
+          { input: 'aabb', expectedOutput: '' },
+        ],
+      },
+      metadata: { difficulty: seniority === 'senior' ? 'medium' : 'easy', focusArea },
+    },
+    {
+      type: 'DSA',
+      prompt: `Given an array of integers, return the length of the longest strictly increasing contiguous subarray. Write code and mention how you would test it.`,
+      expectedAnswer: {
+        answer: 'Single-pass scan that tracks current streak length and best streak length.',
+        rubric: 'Linear scan, correct reset behavior, and basic test coverage explanation.',
+        testCases: [
+          { input: '[1,2,3,1,2]', expectedOutput: '3' },
+          { input: '[5,4,3]', expectedOutput: '1' },
+        ],
+      },
+      metadata: { difficulty: 'medium', focusArea: 'arrays' },
+    },
+    {
+      type: 'MCQ',
+      prompt: 'What is the average-case time complexity of hash table lookup?',
+      choices: ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'],
+      expectedAnswer: 'O(1)',
+      metadata: { category: 'data structures' },
+    },
+    {
+      type: 'MCQ',
+      prompt: 'Which SQL clause is typically used to filter grouped results?',
+      choices: ['WHERE', 'ORDER BY', 'HAVING', 'LIMIT'],
+      expectedAnswer: 'HAVING',
+      metadata: { category: 'databases' },
+    },
+    {
+      type: 'MCQ',
+      prompt: 'Which operating system concept allows many programs to appear to run at the same time on one CPU?',
+      choices: ['Paging', 'Context switching', 'Deadlock', 'Caching'],
+      expectedAnswer: 'Context switching',
+      metadata: { category: 'operating systems' },
+    },
+    {
+      type: 'BEHAVIORAL',
+      prompt: `Tell us about a time you had to learn an unfamiliar technical area quickly. What was the situation, what did you do, and what changed because of your work?`,
+      metadata: { framework: 'STAR' },
+    },
+    {
+      type: 'BEHAVIORAL',
+      prompt: `Describe a time you disagreed with a teammate on an implementation approach. How did you handle the conflict and what was the outcome?`,
+      metadata: { framework: 'STAR' },
+    },
+  ];
+}
+
+export async function generateInterviewQuestions(input: {
+  jobTitle: string;
+  jobDescription: string;
+  requirements: string[];
+  cvSummary?: string;
+}): Promise<InterviewQuestionDraft[]> {
+  const seniorityHint = `${input.jobTitle} ${input.cvSummary ?? ''}`;
+  const fallback = fallbackInterviewQuestions(input.jobTitle, input.requirements, seniorityHint);
+
+  const prompt = `Generate an interview pack for a software candidate. Return JSON only as an array of 7 objects with keys:
+type ("DSA" | "MCQ" | "BEHAVIORAL"), prompt, choices (for MCQ only), expectedAnswer, metadata.
+
+Requirements:
+- 2 DSA questions
+- 3 MCQ questions
+- 2 behavioral questions
+- DSA should be solvable in 10-15 minutes each
+- Questions should align to this job:
+Title: ${input.jobTitle}
+Description: ${input.jobDescription}
+Requirements: ${input.requirements.join(', ')}
+CV summary: ${input.cvSummary ?? 'N/A'}`;
+
+  try {
+    const response = await callLLM([{ role: 'user', content: prompt }], 0.4);
+    const parsed = response ? extractJsonFromResponse(response) : null;
+    if (Array.isArray(parsed) && parsed.length >= 5) {
+      return parsed
+        .filter((item) => item && typeof item.prompt === 'string' && typeof item.type === 'string')
+        .map((item) => ({
+          type: item.type,
+          prompt: item.prompt,
+          choices: Array.isArray(item.choices) ? item.choices : undefined,
+          expectedAnswer: item.expectedAnswer,
+          metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : undefined,
+        })) as InterviewQuestionDraft[];
+    }
+  } catch (error) {
+    console.error('LLM generateInterviewQuestions error, using fallback:', error);
+  }
+
+  return fallback;
+}
+
+function fallbackBehavioralScore(answer: string): BehavioralScore {
+  const normalized = answer.toLowerCase();
+  const starSignals = ['situation', 'task', 'action', 'result'].filter((signal) => normalized.includes(signal));
+  const score = clampScore(
+    30 +
+      Math.min(answer.trim().length / 8, 35) +
+      starSignals.length * 7 +
+      (normalized.includes('learn') || normalized.includes('improve') ? 8 : 0),
+  );
+
+  return {
+    score,
+    reasoning:
+      score >= 70
+        ? 'The answer is reasonably specific, includes actions taken, and shows signs of reflection or measurable outcome.'
+        : 'The answer is still high level. It would be stronger with clearer ownership, trade-offs, and concrete results.',
+    strengths: starSignals.length > 0 ? [`Includes STAR-like structure with signals: ${starSignals.join(', ')}`] : ['Some relevant experience is described.'],
+    risks: score >= 70 ? ['Could still use more measurable outcome detail.'] : ['Needs more concrete actions and outcomes to evaluate real ownership.'],
+  };
+}
+
+export async function scoreBehavioralAnswer(input: {
+  jobTitle: string;
+  question: string;
+  answer: string;
+}): Promise<BehavioralScore> {
+  const prompt = `Score this candidate answer for a software interview. Return JSON only:
+{
+  "score": number,
+  "reasoning": "string",
+  "strengths": ["string"],
+  "risks": ["string"]
+}
+
+Job title: ${input.jobTitle}
+Question: ${input.question}
+Answer: ${input.answer}`;
+
+  try {
+    const response = await callLLM([{ role: 'user', content: prompt }], 0.2);
+    const parsed = response ? extractJsonFromResponse(response) : null;
+    if (parsed && typeof parsed.score === 'number') {
+      return {
+        score: clampScore(parsed.score),
+        reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : '',
+        strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
+        risks: Array.isArray(parsed.risks) ? parsed.risks : [],
+      };
+    }
+  } catch (error) {
+    console.error('LLM scoreBehavioralAnswer error, using fallback:', error);
+  }
+
+  return fallbackBehavioralScore(input.answer);
 }

@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000';
+import api from '../services/api';
 
 const formatPostedDate = (value) => {
   if (!value) return 'Recently';
@@ -50,28 +49,33 @@ const Dashboard = () => {
   const [viewMode, setViewMode] = useState('table');
 
   useEffect(() => {
-    const token = localStorage.getItem('hireflow_token');
-    if (!token) {
-      setError('Please log in to view dashboard data.');
-      setLoading(false);
-      return;
-    }
+    let cancelled = false;
 
-    fetch(`${API_BASE}/api/v1/dashboard`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    })
-      .then(async (response) => {
-        if (!response.ok) {
-          const data = await response.json().catch(() => null);
-          throw new Error(data?.error?.message || 'Failed to load dashboard data.');
+    const loadDashboard = async () => {
+      setLoading(true);
+      setError('');
+
+      try {
+        const res = await api.dashboard.get();
+        if (!cancelled) {
+          setDashboard(res.data);
         }
-        return response.json();
-      })
-      .then((payload) => setDashboard(payload.data))
-      .catch((err) => setError(err.message || 'Unable to fetch dashboard metrics.'))
-      .finally(() => setLoading(false));
+      } catch (err) {
+        if (!cancelled) {
+          setError(err.message || 'Unable to fetch dashboard metrics.');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoading(false);
+        }
+      }
+    };
+
+    loadDashboard();
+
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const metrics = dashboard?.metrics ?? {
@@ -91,9 +95,10 @@ const Dashboard = () => {
         return {
           ...position,
           applicants,
+          screened,
           progress,
           department: position.department || 'General',
-          location: position.location || (index % 2 === 0 ? 'Remote / US' : 'On-site'),
+          location: position.location || 'Location TBD',
           postedDate: formatPostedDate(position.createdAt || position.datePosted),
           displayStatus: position.status === 'OPEN' ? 'Reviewing' : statusLabel(position.status),
         };
@@ -134,7 +139,7 @@ const Dashboard = () => {
   return (
     <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <header className="mb-4">
-        <h1 className="text-2xl font-extrabold tracking-normal text-black">Active Requirement</h1>
+        <h1 className="text-2xl font-extrabold tracking-normal text-black">Dashboard</h1>
       </header>
 
       {loading && (
