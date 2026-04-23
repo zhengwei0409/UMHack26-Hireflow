@@ -1,11 +1,22 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "build": {
-    "dockerfilePath": "docker/Dockerfile.simple",
-    "builder": "DOCKER"
+  "bot": {
+    "build": {
+      "dockerfilePath": "docker/Dockerfile.simple",
+      "builder": "DOCKER"
+    },
+    "deploy": {
+      "numReplicas": 1,
+      "healthCheckPath": "/health"
+    }
   },
-  "deploy": {
-    "numReplicas": 1,
-    "healthCheckPath": "/health"
+  "dashboard": {
+    "build": {
+      "dockerfilePath": "dashboard/Dockerfile",
+      "builder": "DOCKER"
+    },
+    "deploy": {
+      "numReplicas": 1
+    }
   }
 }
