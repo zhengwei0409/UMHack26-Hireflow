@@ -1,34 +1,13 @@
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
-import { scoreBehavioralAnswer } from './glm.service';
+import { scoreInterviewAnswer } from './glm.service';
 import { STATES } from '../workflow/states';
 import { transitionCandidateStatus } from './workflow-state.service';
 
-function parseExpectedAnswer(expectedAnswer: unknown) {
-  if (typeof expectedAnswer === 'string') {
-    return expectedAnswer;
-  }
-  if (expectedAnswer && typeof expectedAnswer === 'object' && 'answer' in expectedAnswer) {
-    return String((expectedAnswer as { answer: unknown }).answer);
-  }
-  return '';
-}
-
-function parsePassRate(executionResult: unknown) {
-  if (executionResult && typeof executionResult === 'object' && 'passRate' in executionResult) {
-    const value = Number((executionResult as { passRate: unknown }).passRate);
-    if (!Number.isNaN(value)) {
-      return Math.min(1, Math.max(0, value));
-    }
-  }
-  return 0;
-}
-
-async function ensureBehavioralScores(sessionId: string) {
+async function ensureAnswerScores(sessionId: string) {
   const answers = await prisma.candidateAnswer.findMany({
     where: {
       sessionId,
-      question: { type: 'BEHAVIORAL' },
     },
     include: {
       question: true,
@@ -41,24 +20,36 @@ async function ensureBehavioralScores(sessionId: string) {
   });
 
   for (const answer of answers) {
-    if (answer.aiScore !== null || !answer.rawAnswer?.trim()) {
+    const hasAnswerEvidence = !!(
+      answer.rawAnswer?.trim() ||
+      answer.selectedOption?.trim() ||
+      answer.codeSubmission?.trim()
+    );
+
+    if (answer.aiScore !== null || !hasAnswerEvidence) {
       continue;
     }
 
-    const behavioralScore = await scoreBehavioralAnswer({
+    const aiEvaluation = await scoreInterviewAnswer({
       jobTitle: answer.session.job.title,
+      type: answer.question.type,
       question: answer.question.prompt,
-      answer: answer.rawAnswer,
+      answerText: answer.rawAnswer ?? undefined,
+      selectedOption: answer.selectedOption ?? undefined,
+      choices: answer.question.choices,
+      codeSubmission: answer.codeSubmission ?? undefined,
+      programmingLanguage: answer.programmingLanguage ?? undefined,
     });
 
     await prisma.candidateAnswer.update({
       where: { id: answer.id },
       data: {
-        aiScore: behavioralScore.score,
-        aiReasoning: behavioralScore.reasoning,
+        aiScore: aiEvaluation.score,
+        aiReasoning: aiEvaluation.reasoning,
         metadata: {
-          strengths: behavioralScore.strengths,
-          risks: behavioralScore.risks,
+          evaluator: aiEvaluation.evaluator,
+          strengths: aiEvaluation.strengths,
+          risks: aiEvaluation.risks,
         } as Prisma.InputJsonValue,
       },
     });
@@ -66,7 +57,7 @@ async function ensureBehavioralScores(sessionId: string) {
 }
 
 export async function scoreSession(sessionId: string) {
-  await ensureBehavioralScores(sessionId);
+  await ensureAnswerScores(sessionId);
 
   const session = await prisma.interviewSession.findUnique({
     where: { id: sessionId },
@@ -90,19 +81,31 @@ export async function scoreSession(sessionId: string) {
   const dsaQuestions = session.questions.filter((question) => question.type === 'DSA');
   const mcqQuestions = session.questions.filter((question) => question.type === 'MCQ');
   const behavioralQuestions = session.questions.filter((question) => question.type === 'BEHAVIORAL');
+  const answerEvaluators = session.questions
+    .flatMap((question) => question.answers)
+    .map((answer) =>
+      answer.metadata && typeof answer.metadata === 'object' && !Array.isArray(answer.metadata) && 'evaluator' in answer.metadata
+        ? String((answer.metadata as { evaluator?: unknown }).evaluator)
+        : 'UNKNOWN',
+    );
+  const fallbackAnswerCount = answerEvaluators.filter((evaluator) => evaluator === 'FALLBACK').length;
+  const glmAnswerCount = answerEvaluators.filter((evaluator) => evaluator === 'GLM').length;
+  const evaluationMode =
+    fallbackAnswerCount > 0 && glmAnswerCount > 0
+      ? 'MIXED'
+      : fallbackAnswerCount > 0
+        ? 'FALLBACK'
+        : glmAnswerCount > 0
+          ? 'GLM'
+          : 'UNKNOWN';
 
   const dsaScore =
     dsaQuestions.length > 0
-      ? dsaQuestions.reduce((sum, question) => sum + parsePassRate(question.answers[0]?.executionResult), 0) / dsaQuestions.length
+      ? dsaQuestions.reduce((sum, question) => sum + ((question.answers[0]?.aiScore ?? 0) / 100), 0) / dsaQuestions.length
       : 0;
 
   const mcqScore =
-    mcqQuestions.length > 0
-      ? mcqQuestions.reduce((sum, question) => {
-          const answer = question.answers[0];
-          return sum + (answer?.selectedOption === parseExpectedAnswer(question.expectedAnswer) ? 1 : 0);
-        }, 0) / mcqQuestions.length
-      : 0;
+    mcqQuestions.length > 0 ? mcqQuestions.reduce((sum, question) => sum + ((question.answers[0]?.aiScore ?? 0) / 100), 0) / mcqQuestions.length : 0;
 
   const behavioralScore =
     behavioralQuestions.length > 0
@@ -120,7 +123,21 @@ export async function scoreSession(sessionId: string) {
     behavioralScore: Number((behavioralScore * 100).toFixed(2)),
     cvScore: Number((cvScore * 100).toFixed(2)),
     proctorPenalty: Number((penalty * 100).toFixed(2)),
-    formula: '0.45*DSA + 0.20*MCQ + 0.15*Behavioral + 0.20*CV - penalty',
+    formula:
+      evaluationMode === 'GLM'
+        ? '0.45*GLM_DSA + 0.20*GLM_MCQ + 0.15*GLM_Behavioral + 0.20*GLM_CV - proctorPenalty'
+        : '0.45*DSA_estimate + 0.20*MCQ_estimate + 0.15*Behavioral_estimate + 0.20*CV - proctorPenalty',
+    evaluator: evaluationMode,
+    evaluatorLabel:
+      evaluationMode === 'GLM'
+        ? 'GLM evaluation completed'
+        : evaluationMode === 'FALLBACK'
+          ? 'Temporary fallback estimate because GLM evaluation was unavailable'
+          : evaluationMode === 'MIXED'
+            ? 'Mixed GLM and fallback evaluation'
+            : 'Evaluation source unknown',
+    fallbackAnswerCount,
+    glmAnswerCount,
   } satisfies Prisma.JsonObject;
 
   await prisma.$transaction(async (tx) => {

@@ -7,7 +7,7 @@ const fieldClassName =
 
 const Shell = ({ children }) => (
   <div className="min-h-screen bg-[#f5f5f5] px-4 py-6 text-black sm:px-6 lg:px-8">
-    <div className="mx-auto max-w-3xl rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">{children}</div>
+    <div className="mx-auto max-w-3xl rounded-md border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">{children}</div>
   </div>
 );
 

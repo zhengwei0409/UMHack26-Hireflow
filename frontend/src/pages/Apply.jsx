@@ -78,7 +78,7 @@ const Apply = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-5xl rounded-[28px] border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
+        <div className="mx-auto max-w-5xl rounded-md border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
           Loading application form...
         </div>
       </div>
@@ -98,7 +98,7 @@ const Apply = () => {
   if (success) {
     return (
       <div className="min-h-screen bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="mx-auto max-w-3xl rounded-[32px] border border-zinc-200 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
+        <div className="mx-auto max-w-3xl rounded-md border border-zinc-200 bg-white px-6 py-10 text-center shadow-sm sm:px-10">
           <div className="mx-auto grid h-16 w-16 place-items-center rounded-full bg-emerald-100 text-2xl font-extrabold text-emerald-700">
             ✓
           </div>
@@ -119,7 +119,7 @@ const Apply = () => {
   return (
     <div className="min-h-screen bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
-        <section className="overflow-hidden rounded-[32px] border border-zinc-200 bg-white shadow-sm">
+        <section className="overflow-hidden rounded-md border border-zinc-200 bg-white shadow-sm">
           <div className="px-6 py-6 sm:px-8 sm:py-8">
             <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Apply now</p>
             <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-4xl">
@@ -150,7 +150,7 @@ const Apply = () => {
                   {job.requirements.map((requirement, index) => (
                     <li
                       key={`${requirement}-${index}`}
-                      className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700"
+                      className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700"
                     >
                       {requirement}
                     </li>
@@ -161,7 +161,7 @@ const Apply = () => {
           </div>
         </section>
 
-        <section className="rounded-[32px] border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
+        <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="mb-6">
             <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Your application</h2>
             <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">

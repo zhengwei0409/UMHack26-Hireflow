@@ -7,8 +7,12 @@ const router = Router();
 router.get('/session/:token', interviewController.getSessionByToken);
 router.post('/session/:token/start', interviewController.startSession);
 router.post('/session/:token/answers', interviewController.saveAnswer);
-router.post('/session/:token/code-exec', interviewController.runCode);
 router.post('/session/:token/proctor-events', interviewController.logProctorEvents);
+router.post(
+  '/session/:token/recordings',
+  interviewController.interviewRecordingUpload,
+  interviewController.uploadInterviewRecordings,
+);
 router.post('/session/:token/submit', interviewController.submitSession);
 
 router.get('/ranked-shortlist', requireAuth, interviewController.getRankedShortlist);
