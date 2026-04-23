@@ -215,18 +215,17 @@ export const interviews = {
       body: JSON.stringify(data),
     }).then(handleResponse),
 
-  runCode: (token, data) =>
-    fetch(`${API_BASE}/interviews/session/${token}/code-exec`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
   logProctorEvents: (token, events) =>
     fetch(`${API_BASE}/interviews/session/${token}/proctor-events`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ events }),
+    }).then(handleResponse),
+
+  uploadRecordings: (token, formData) =>
+    fetch(`${API_BASE}/interviews/session/${token}/recordings`, {
+      method: 'POST',
+      body: formData,
     }).then(handleResponse),
 
   submit: (token) =>
