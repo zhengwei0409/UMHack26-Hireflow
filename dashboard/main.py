@@ -381,9 +381,9 @@ async def start_bot(bot_id: str) -> MeetingBot:
         raise HTTPException(status_code=400, detail="Bot already active")
     
     # Check if running in cloud mode (external joinly API)
-    cloud_url = os.environ.get("JOINTLY_API_URL")
-    if cloud_url:
-        # Cloud mode: connect to external API
+    cloud_url = os.environ.get("JOINTLY_SERVER_URL", "")
+    if cloud_url and is_cloud_mode():
+        # Cloud mode: connect to external server
         try:
             import httpx
             async with httpx.AsyncClient() as client:
