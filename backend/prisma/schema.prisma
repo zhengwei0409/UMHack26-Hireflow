@@ -99,7 +99,6 @@ model InterviewQuestion {
   sequence       Int
   prompt         String
   choices        Json?
-  expectedAnswer Json?
   metadata       Json?
   createdAt      DateTime              @default(now())
   answers        CandidateAnswer[]
@@ -115,7 +114,6 @@ model CandidateAnswer {
   selectedOption      String?
   codeSubmission      String?
   programmingLanguage String?
-  executionResult     Json?
   aiScore             Float?
   aiReasoning         String?
   metadata            Json?

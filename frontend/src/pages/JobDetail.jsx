@@ -14,15 +14,11 @@ const formatStatusLabel = (status) =>
 const getStatusTone = (status) => {
   const normalized = String(status || '').toLowerCase();
 
-  if (normalized.includes('open') || normalized.includes('review')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  }
-
   if (normalized.includes('closed')) {
-    return 'border-zinc-200 bg-zinc-100 text-zinc-600';
+    return 'border-zinc-300 bg-zinc-100 text-zinc-700';
   }
 
-  return 'border-zinc-200 bg-white text-zinc-700';
+  return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
 const formatScore = (candidate) => {
@@ -129,7 +125,7 @@ const JobDetail = () => {
   if (loading) {
     return (
       <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="rounded-[28px] border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
+        <div className="rounded-md border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
           Loading role details...
         </div>
       </div>
@@ -159,7 +155,7 @@ const JobDetail = () => {
   return (
     <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white">
+        <section className="overflow-hidden rounded-md border border-zinc-200 bg-white">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8 lg:py-8">
             <div className="max-w-3xl">
               <Link
@@ -222,7 +218,7 @@ const JobDetail = () => {
         )}
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)]">
-          <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
+          <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
             <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Role overview</h2>
             <p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-7 text-zinc-600">{job.description}</p>
 
@@ -233,7 +229,7 @@ const JobDetail = () => {
                   {job.requirements.map((requirement, index) => (
                     <li
                       key={`${requirement}-${index}`}
-                      className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700"
+                      className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700"
                     >
                       {requirement}
                     </li>
@@ -243,7 +239,7 @@ const JobDetail = () => {
             )}
           </section>
 
-          <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
+          <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="mb-5">
               <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">AI prescreen config</h2>
               <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
@@ -290,7 +286,7 @@ const JobDetail = () => {
           </section>
         </div>
 
-        <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
+        <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
               <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Top shortlist signals</h2>
@@ -307,7 +303,7 @@ const JobDetail = () => {
           </div>
 
           {shortlist.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-sm font-semibold text-zinc-500">
+            <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-sm font-semibold text-zinc-500">
               No scored AI interviews yet.
             </div>
           ) : (
@@ -355,7 +351,7 @@ const JobDetail = () => {
           )}
         </section>
 
-        <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
+        <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
           <div className="mb-5">
             <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Applicants ({candidates.length})</h2>
             <p className="mt-2 text-sm font-medium text-zinc-600">
@@ -364,7 +360,7 @@ const JobDetail = () => {
           </div>
 
           {candidates.length === 0 ? (
-            <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-sm font-semibold text-zinc-500">
+            <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-sm font-semibold text-zinc-500">
               No applicants yet.
             </div>
           ) : (

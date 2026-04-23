@@ -39,36 +39,20 @@ const getStatusTone = (status) => {
   const normalized = String(status || '').toLowerCase();
 
   if (normalized.includes('rejected') || normalized.includes('failed')) {
-    return 'border-red-200 bg-red-50 text-red-700';
+    return 'border-red-200 bg-red-50 text-red-600';
   }
 
-  if (normalized.includes('offer') || normalized.includes('hired')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  }
-
-  if (normalized.includes('scheduled') || normalized.includes('confirmed')) {
-    return 'border-blue-200 bg-blue-50 text-blue-700';
-  }
-
-  if (normalized.includes('review') || normalized.includes('pending') || normalized.includes('progress')) {
-    return 'border-amber-200 bg-amber-50 text-amber-700';
-  }
-
-  return 'border-zinc-200 bg-zinc-100 text-zinc-700';
+  return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
 const getRecommendationTone = (value) => {
   const normalized = String(value || '').toLowerCase();
 
-  if (normalized.includes('strong') || normalized.includes('accept') || normalized.includes('advance')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  }
-
   if (normalized.includes('reject')) {
-    return 'border-red-200 bg-red-50 text-red-700';
+    return 'border-red-200 bg-red-50 text-red-600';
   }
 
-  return 'border-amber-200 bg-amber-50 text-amber-700';
+  return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
 const getActionButtonClass = (variant) => {
@@ -88,7 +72,7 @@ const getActionButtonClass = (variant) => {
 };
 
 const DetailCard = ({ title, description, children }) => (
-  <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
+  <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
     <div className="mb-5">
       <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">{title}</h2>
       {description && <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">{description}</p>}
@@ -98,7 +82,7 @@ const DetailCard = ({ title, description, children }) => (
 );
 
 const MetricTile = ({ label, value }) => (
-  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-4">
+  <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-4">
     <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">{label}</p>
     <p className="mt-2 text-xl font-extrabold tracking-tight text-zinc-950">{value}</p>
   </div>
@@ -267,7 +251,7 @@ const CandidateDetail = () => {
   if (loading) {
     return (
       <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="rounded-[28px] border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
+        <div className="rounded-md border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
           Loading candidate profile...
         </div>
       </div>
@@ -297,7 +281,7 @@ const CandidateDetail = () => {
   return (
     <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white">
+        <section className="overflow-hidden rounded-md border border-zinc-200 bg-white">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8 lg:py-8">
             <div className="max-w-3xl">
               <Link
@@ -378,7 +362,7 @@ const CandidateDetail = () => {
                 <p className="text-sm font-medium leading-7 text-zinc-600">{glmAnalysis.summary}</p>
 
                 <div className="mt-6 grid gap-4 lg:grid-cols-2">
-                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                  <div className="rounded-md border border-zinc-200 bg-zinc-50 p-5">
                     <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500">Strengths</h3>
                     <ul className="mt-4 grid gap-3">
                       {(glmAnalysis.strengths || []).map((item, index) => (
@@ -389,7 +373,7 @@ const CandidateDetail = () => {
                     </ul>
                   </div>
 
-                  <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                  <div className="rounded-md border border-zinc-200 bg-zinc-50 p-5">
                     <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500">Weaknesses</h3>
                     <ul className="mt-4 grid gap-3">
                       {(glmAnalysis.weaknesses || []).map((item, index) => (
@@ -434,18 +418,25 @@ const CandidateDetail = () => {
                 </div>
 
                 {aiReport.summary && (
-                  <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-                    <MetricTile label="DSA" value={`${Math.round(aiReport.summary.dsaScore || 0)}%`} />
-                    <MetricTile label="MCQ" value={`${Math.round(aiReport.summary.mcqScore || 0)}%`} />
-                    <MetricTile label="Behavioral" value={`${Math.round(aiReport.summary.behavioralScore || 0)}%`} />
-                    <MetricTile label="CV match" value={`${Math.round(aiReport.summary.cvScore || 0)}%`} />
-                    <MetricTile label="Penalty" value={`${Math.round(aiReport.summary.proctorPenalty || 0)} pts`} />
-                  </div>
+                  <>
+                    {aiReport.summary.evaluator && aiReport.summary.evaluator !== 'GLM' && (
+                      <div className="mt-6 rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
+                        {aiReport.summary.evaluatorLabel || 'This interview used a fallback estimate because GLM evaluation was unavailable.'}
+                      </div>
+                    )}
+                    <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                      <MetricTile label="DSA" value={`${Math.round(aiReport.summary.dsaScore || 0)}%`} />
+                      <MetricTile label="MCQ" value={`${Math.round(aiReport.summary.mcqScore || 0)}%`} />
+                      <MetricTile label="Behavioral" value={`${Math.round(aiReport.summary.behavioralScore || 0)}%`} />
+                      <MetricTile label="CV match" value={`${Math.round(aiReport.summary.cvScore || 0)}%`} />
+                      <MetricTile label="Penalty" value={`${Math.round(aiReport.summary.proctorPenalty || 0)} pts`} />
+                    </div>
+                  </>
                 )}
 
                 <div className="mt-6 grid gap-3">
                   {(aiReport.session.questions || []).map((question) => (
-                    <article key={question.id} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                    <article key={question.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="max-w-3xl">
                           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
@@ -453,10 +444,23 @@ const CandidateDetail = () => {
                           </p>
                           <p className="mt-2 text-sm font-semibold leading-6 text-zinc-800">{question.prompt}</p>
                         </div>
-                        <div className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-700">
-                          {question.latestAnswer?.aiScore !== undefined && question.latestAnswer?.aiScore !== null
-                            ? `${Math.round(question.latestAnswer.aiScore)}%`
-                            : 'Pending'}
+                        <div className="flex flex-wrap gap-2">
+                          {question.latestAnswer?.metadata?.evaluator && (
+                            <div
+                              className={`rounded-full border px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] ${
+                                question.latestAnswer.metadata.evaluator === 'GLM'
+                                  ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                                  : 'border-amber-200 bg-amber-50 text-amber-700'
+                              }`}
+                            >
+                              {question.latestAnswer.metadata.evaluator === 'GLM' ? 'GLM' : 'Fallback'}
+                            </div>
+                          )}
+                          <div className="rounded-full border border-zinc-200 bg-white px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-700">
+                            {question.latestAnswer?.aiScore !== undefined && question.latestAnswer?.aiScore !== null
+                              ? `${Math.round(question.latestAnswer.aiScore)}%`
+                              : 'Pending'}
+                          </div>
                         </div>
                       </div>
                     </article>
@@ -470,13 +474,13 @@ const CandidateDetail = () => {
               description="Every workflow transition recorded for this candidate."
             >
               {history.length === 0 ? (
-                <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-sm font-semibold text-zinc-500">
+                <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-sm font-semibold text-zinc-500">
                   No history yet
                 </div>
               ) : (
                 <div className="grid gap-4">
                   {history.map((item, index) => (
-                    <article key={`${item.event}-${item.at}-${index}`} className="rounded-2xl border border-zinc-200 bg-zinc-50 p-4">
+                    <article key={`${item.event}-${item.at}-${index}`} className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
                       <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">{item.event}</p>
                       <p className="mt-2 text-sm font-extrabold text-zinc-950">
                         {item.from || 'START'} → {item.to}
@@ -492,7 +496,7 @@ const CandidateDetail = () => {
           </div>
 
           <div className="grid gap-6 self-start xl:sticky xl:top-6">
-            <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
+            <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="mb-5">
                 <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Actions</h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
@@ -526,13 +530,13 @@ const CandidateDetail = () => {
                   ))}
                 </div>
               ) : (
-                <div className="rounded-2xl border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center text-sm font-semibold text-zinc-500">
+                <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-6 text-center text-sm font-semibold text-zinc-500">
                   No actions available for this status.
                 </div>
               )}
             </section>
 
-            <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm">
+            <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="mb-5">
                 <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Documents</h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
@@ -550,7 +554,7 @@ const CandidateDetail = () => {
               </a>
             </section>
 
-            <section className="rounded-[28px] border border-red-200 bg-white p-6 shadow-sm">
+            <section className="rounded-md border border-red-200 bg-white p-6 shadow-sm">
               <div className="mb-5">
                 <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Danger zone</h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
@@ -575,7 +579,7 @@ const CandidateDetail = () => {
             onClick={() => setShowScheduleModal(false)}
           >
             <div
-              className="w-full max-w-lg rounded-[28px] border border-zinc-200 bg-white p-6 shadow-xl sm:p-8"
+              className="w-full max-w-lg rounded-md border border-zinc-200 bg-white p-6 shadow-xl sm:p-8"
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-6">

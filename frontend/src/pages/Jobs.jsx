@@ -16,15 +16,11 @@ const formatStatusLabel = (status) =>
 const getStatusTone = (status) => {
   const normalized = String(status || '').toLowerCase();
 
-  if (normalized.includes('open') || normalized.includes('review')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  }
-
   if (normalized.includes('closed')) {
-    return 'border-zinc-200 bg-zinc-100 text-zinc-600';
+    return 'border-zinc-300 bg-zinc-100 text-zinc-700';
   }
 
-  return 'border-zinc-200 bg-white text-zinc-700';
+  return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
 const Jobs = () => {
@@ -123,7 +119,7 @@ const Jobs = () => {
   if (loading) {
     return (
       <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="rounded-2xl border border-zinc-200 bg-white px-6 py-10 text-center text-sm font-semibold text-zinc-500">
+        <div className="rounded-md border border-zinc-200 bg-white px-6 py-10 text-center text-sm font-semibold text-zinc-500">
           Loading roles...
         </div>
       </div>
@@ -133,7 +129,7 @@ const Jobs = () => {
   return (
     <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white">
+        <section className="overflow-hidden rounded-md border border-zinc-200 bg-white">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8 lg:py-8">
             <div className="max-w-3xl">
               <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Hiring workspace</p>
@@ -167,7 +163,7 @@ const Jobs = () => {
         </section>
 
         {showForm && (
-          <section className="rounded-[28px] border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
+          <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
             <div className="mb-6 flex flex-col gap-2">
               <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Create a new role</h2>
               <p className="text-sm font-medium leading-6 text-zinc-600">
@@ -297,7 +293,7 @@ const Jobs = () => {
         )}
 
         {visibleJobs.length === 0 ? (
-          <section className="rounded-[28px] border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
+          <section className="rounded-md border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
             <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">No roles yet</p>
             <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-950">Create your first job posting</h2>
             <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-6 text-zinc-600">
@@ -319,7 +315,7 @@ const Jobs = () => {
               return (
                 <article
                   key={job.id}
-                  className="flex h-full flex-col rounded-[24px] border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="flex h-full flex-col rounded-md border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-2">
@@ -344,17 +340,17 @@ const Jobs = () => {
                   </p>
 
                   <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
                       <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">Applicants</p>
                       <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">{applicantCount}</p>
                     </div>
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
                       <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">AI threshold</p>
                       <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">
                         {job.autoScreenThreshold ?? 60}%
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
                       <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">Shortlist</p>
                       <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">
                         {job.shortlistSize ?? 10}

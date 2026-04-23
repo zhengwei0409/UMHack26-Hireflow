@@ -21,8 +21,8 @@
 - Save a DSA answer and verify `CandidateAnswer.codeSubmission` and `programmingLanguage` persist.
 - Save an MCQ answer and verify `selectedOption` persists.
 - Save a behavioral answer and verify `rawAnswer` persists.
-- Run code and verify `executionResult.passRate` is stored.
 - Submit the interview and verify candidate status moves through `AI_INTERVIEW_COMPLETED` to `AI_INTERVIEW_SCORED`.
+- Verify DSA, MCQ, and behavioral answers each receive `aiScore` and `aiReasoning` from the GLM evaluator.
 - Verify `aiInterviewScore`, `aiInterviewRank`, and shortlist ordering are recomputed.
 
 ## Evidence and HR review
@@ -47,6 +47,5 @@
 
 ## Known caveats for MVP
 
-- Code execution falls back to a deterministic stub if Judge0 is not configured.
-- Behavioral scoring falls back to heuristics if the DeepSeek key is not configured.
+- GLM answer evaluation falls back to deterministic heuristics if the GLM key is not configured.
 - The current frontend build depends on local `node_modules` health; if packages are missing, run `npm install`.

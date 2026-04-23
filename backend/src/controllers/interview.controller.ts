@@ -1,13 +1,36 @@
+import fs from 'fs';
+import path from 'path';
+import multer from 'multer';
 import { Request, Response } from 'express';
 import * as interviewService from '../services/interview-orchestrator.service';
 import * as proctorService from '../services/proctor.service';
 import * as rankingService from '../services/ranking.service';
 
+const uploadDir = path.resolve(process.cwd(), 'uploads', 'interview-recordings');
+fs.mkdirSync(uploadDir, { recursive: true });
+
+const storage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const safeToken = String(req.params.token || 'session').replace(/[^a-zA-Z0-9_-]/g, '');
+    const extension = path.extname(file.originalname) || '.webm';
+    cb(null, `${safeToken}-${file.fieldname}-${Date.now()}${extension}`);
+  },
+});
+
+export const interviewRecordingUpload = multer({ storage }).fields([
+  { name: 'screenRecording', maxCount: 1 },
+  { name: 'cameraRecording', maxCount: 1 },
+]);
+
 function mapInterviewError(err: Error) {
   const errorMap: Record<string, [number, string]> = {
     SESSION_NOT_FOUND: [404, 'Interview session not found'],
+    SESSION_ALREADY_COMPLETED: [409, 'This AI interview link has already been used. Each candidate can only complete it once.'],
+    SESSION_NOT_STARTED: [409, 'Please start the interview before submitting answers.'],
     QUESTION_NOT_FOUND: [404, 'Interview question not found'],
-    QUESTION_NOT_CODE: [400, 'This question does not support code execution'],
     CANDIDATE_NOT_FOUND: [404, 'Candidate not found'],
   };
 
@@ -57,29 +80,6 @@ export async function saveAnswer(req: Request<{ token: string }>, res: Response)
   }
 }
 
-export async function runCode(req: Request<{ token: string }>, res: Response) {
-  const { questionId, language, sourceCode } = req.body ?? {};
-
-  if (!questionId || !language || !sourceCode) {
-    return res.status(400).json({
-      success: false,
-      error: { code: 'VALIDATION_ERROR', message: 'questionId, language, and sourceCode are required' },
-    });
-  }
-
-  try {
-    const result = await interviewService.executeInterviewCode(req.params.token, {
-      questionId,
-      language,
-      sourceCode,
-    });
-    return res.status(200).json({ success: true, data: result });
-  } catch (err: any) {
-    const [status, message] = mapInterviewError(err);
-    return res.status(status).json({ success: false, error: { code: err.message, message } });
-  }
-}
-
 export async function submitSession(req: Request<{ token: string }>, res: Response) {
   try {
     const result = await interviewService.submitInterviewSession(req.params.token);
@@ -101,6 +101,50 @@ export async function logProctorEvents(req: Request<{ token: string }>, res: Res
     const session = await interviewService.getInterviewSessionByToken(req.params.token);
     const created = await proctorService.logProctorEvents(session.id, events);
     return res.status(201).json({ success: true, data: created });
+  } catch (err: any) {
+    const [status, message] = mapInterviewError(err);
+    return res.status(status).json({ success: false, error: { code: err.message, message } });
+  }
+}
+
+export async function uploadInterviewRecordings(req: Request<{ token: string }>, res: Response) {
+  try {
+    const files = req.files as Record<string, Express.Multer.File[]> | undefined;
+    const screenRecording = files?.screenRecording?.[0];
+    const cameraRecording = files?.cameraRecording?.[0];
+    const metadata =
+      typeof req.body?.metadata === 'string' && req.body.metadata
+        ? JSON.parse(req.body.metadata)
+        : undefined;
+
+    if (!screenRecording && !cameraRecording) {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'At least one recording file is required' },
+      });
+    }
+
+    const recordings = await interviewService.attachInterviewRecordings(req.params.token, {
+      screenRecording: screenRecording
+        ? {
+            path: path.relative(process.cwd(), screenRecording.path).replace(/\\/g, '/'),
+            filename: screenRecording.filename,
+            mimeType: screenRecording.mimetype,
+            size: screenRecording.size,
+          }
+        : undefined,
+      cameraRecording: cameraRecording
+        ? {
+            path: path.relative(process.cwd(), cameraRecording.path).replace(/\\/g, '/'),
+            filename: cameraRecording.filename,
+            mimeType: cameraRecording.mimetype,
+            size: cameraRecording.size,
+          }
+        : undefined,
+      metadata,
+    });
+
+    return res.status(201).json({ success: true, data: recordings });
   } catch (err: any) {
     const [status, message] = mapInterviewError(err);
     return res.status(status).json({ success: false, error: { code: err.message, message } });

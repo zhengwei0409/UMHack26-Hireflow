@@ -15,22 +15,10 @@ const getStatusTone = (status) => {
   const normalized = String(status || '').toLowerCase();
 
   if (normalized.includes('rejected') || normalized.includes('failed')) {
-    return 'border-red-200 bg-red-50 text-red-700';
+    return 'border-red-200 bg-red-50 text-red-600';
   }
 
-  if (normalized.includes('offer') || normalized.includes('hired')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  }
-
-  if (normalized.includes('scheduled') || normalized.includes('confirmed')) {
-    return 'border-blue-200 bg-blue-50 text-blue-700';
-  }
-
-  if (normalized.includes('pending') || normalized.includes('review') || normalized.includes('progress')) {
-    return 'border-amber-200 bg-amber-50 text-amber-700';
-  }
-
-  return 'border-zinc-200 bg-zinc-100 text-zinc-700';
+  return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
 const formatScore = (candidate) => {
@@ -116,7 +104,7 @@ const Candidates = () => {
   return (
     <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white">
+        <section className="overflow-hidden rounded-md border border-zinc-200 bg-white">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_380px] lg:px-8 lg:py-8">
             <div className="max-w-3xl">
               <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Applicant pipeline</p>
@@ -126,7 +114,7 @@ const Candidates = () => {
               </p>
             </div>
 
-            <div className="grid gap-4 rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 sm:grid-cols-2">
+            <div className="grid gap-4 rounded-md border border-zinc-200 bg-zinc-50 p-4 sm:grid-cols-2">
               <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
                 <span>Job</span>
                 <select
@@ -186,7 +174,7 @@ const Candidates = () => {
         )}
 
         {loading ? (
-          <div className="rounded-[28px] border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
+          <div className="rounded-md border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
             Loading candidates...
           </div>
         ) : (
@@ -194,7 +182,7 @@ const Candidates = () => {
             {Object.keys(counts).length > 0 && (
               <section className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
                 {Object.entries(counts).map(([status, count]) => (
-                  <article key={status} className="rounded-2xl border border-zinc-200 bg-white px-5 py-4 shadow-sm">
+                  <article key={status} className="rounded-md border border-zinc-200 bg-white px-5 py-4 shadow-sm">
                     <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
                       {formatStatusLabel(status)}
                     </p>
@@ -205,7 +193,7 @@ const Candidates = () => {
             )}
 
             {candidates.length === 0 ? (
-              <section className="rounded-[28px] border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
+              <section className="rounded-md border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
                 <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">No matches</p>
                 <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-950">No candidates found</h2>
                 <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-6 text-zinc-600">
@@ -213,7 +201,7 @@ const Candidates = () => {
                 </p>
               </section>
             ) : (
-              <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white shadow-sm">
+              <section className="overflow-hidden rounded-md border border-zinc-200 bg-white shadow-sm">
                 <div className="flex items-center justify-between border-b border-zinc-200 px-6 py-4">
                   <div>
                     <h2 className="text-lg font-extrabold tracking-tight text-zinc-950">Applicant list</h2>
