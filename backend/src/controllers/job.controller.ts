@@ -9,14 +9,15 @@ export async function createJob(req: Request, res: Response) {
     description,
     requirements,
     location,
+    closingDate,
     autoScreenThreshold,
     shortlistSize,
   } = req.body;
 
-  if (!title || !department || !description || !location) {
+  if (!title || !department || !description || !location || !closingDate) {
     return res.status(400).json({
       success: false,
-      error: { code: 'VALIDATION_ERROR', message: 'title, department, description, and location are required' },
+      error: { code: 'VALIDATION_ERROR', message: 'title, department, description, location, and closingDate are required' },
     });
   }
 
@@ -34,6 +35,7 @@ export async function createJob(req: Request, res: Response) {
       description,
       requirements,
       location,
+      closingDate,
       autoScreenThreshold,
       shortlistSize,
     });
@@ -45,9 +47,16 @@ export async function createJob(req: Request, res: Response) {
         title: job.title,
         publicApplyUrl: `${frontendUrl}/apply/${job.id}`,
         createdAt: job.createdAt,
+        closingDate: job.closingDate,
       },
     });
-  } catch {
+  } catch (err: any) {
+    if (err.message === 'INVALID_CLOSING_DATE') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'closingDate must be a valid date' },
+      });
+    }
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }
 }
@@ -114,6 +123,12 @@ export async function getJob(req: Request<{ id: string }>, res: Response) {
     if (err.message === 'JOB_NOT_FOUND') {
       return res.status(404).json({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found' } });
     }
+    if (err.message === 'INVALID_CLOSING_DATE') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'closingDate must be a valid date' },
+      });
+    }
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }
 }
@@ -126,6 +141,7 @@ export async function updateJob(req: Request<{ id: string }>, res: Response) {
     description,
     requirements,
     location,
+    closingDate,
     autoScreenThreshold,
     shortlistSize,
   } = req.body;
@@ -137,6 +153,7 @@ export async function updateJob(req: Request<{ id: string }>, res: Response) {
       description,
       requirements,
       location,
+      closingDate,
       autoScreenThreshold,
       shortlistSize,
     });
@@ -145,18 +162,25 @@ export async function updateJob(req: Request<{ id: string }>, res: Response) {
     if (err.message === 'JOB_NOT_FOUND') {
       return res.status(404).json({ success: false, error: { code: 'JOB_NOT_FOUND', message: 'Job not found' } });
     }
+    if (err.message === 'INVALID_CLOSING_DATE') {
+      return res.status(400).json({
+        success: false,
+        error: { code: 'VALIDATION_ERROR', message: 'closingDate must be a valid date' },
+      });
+    }
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }
 }
 
 export async function updatePrescreenConfig(req: Request<{ id: string }>, res: Response) {
   const { id } = req.params;
-  const { autoScreenThreshold, shortlistSize } = req.body ?? {};
+  const { autoScreenThreshold, shortlistSize, closingDate } = req.body ?? {};
 
   try {
     const job = await jobService.updateJob(id, {
       autoScreenThreshold,
       shortlistSize,
+      closingDate,
     });
     return res.status(200).json({ success: true, data: job });
   } catch (err: any) {

@@ -240,7 +240,7 @@ const HRSignUp = () => {
             <div className="dashboard-header">
               <div>
                 <p className="eyebrow">{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidates' : currentPage === 'workflow' ? 'Workflow' : 'Settings'}</p>
-                <h1>{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidate pipeline' : currentPage === 'workflow' ? 'Workflow overview' : 'Settings'} </h1>
+                <h1>{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidate list' : currentPage === 'workflow' ? 'Workflow overview' : 'Settings'} </h1>
                 <p className="dashboard-copy">This workspace page is part of the HireFlow shared layout and will reuse the header and sidebar across every screen.</p>
               </div>
             </div>
@@ -334,7 +334,7 @@ const HRSignUp = () => {
             <div className="dashboard-header">
               <div>
                 <p className="eyebrow">{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidates' : currentPage === 'workflow' ? 'Workflow' : 'Settings'}</p>
-                <h1>{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidate pipeline' : currentPage === 'workflow' ? 'Workflow overview' : 'Settings'} </h1>
+                <h1>{currentPage === 'positions' ? 'Job Positions' : currentPage === 'candidates' ? 'Candidate list' : currentPage === 'workflow' ? 'Workflow overview' : 'Settings'} </h1>
                 <p className="dashboard-copy">This workspace page is part of the HireFlow shared layout and will reuse the header and sidebar across every screen.</p>
               </div>
             </div>
