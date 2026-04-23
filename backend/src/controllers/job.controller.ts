@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import * as jobService from '../services/job.service';
+import * as glmService from '../services/glm.service';
 
 export async function createJob(req: Request, res: Response) {
   const {
@@ -47,6 +48,45 @@ export async function createJob(req: Request, res: Response) {
       },
     });
   } catch {
+    return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
+  }
+}
+
+export async function draftJobFromChat(req: Request, res: Response) {
+  const messages = Array.isArray(req.body?.messages) ? req.body.messages : [];
+  const safeMessages = messages
+    .filter((message: any) => message && (message.role === 'user' || message.role === 'assistant') && typeof message.content === 'string')
+    .slice(-12)
+    .map((message: any) => ({
+      role: message.role,
+      content: message.content.slice(0, 4000),
+    }));
+
+  if (safeMessages.length === 0) {
+    return res.status(400).json({
+      success: false,
+      error: { code: 'VALIDATION_ERROR', message: 'messages are required' },
+    });
+  }
+
+  try {
+    const result = await glmService.draftJobFromConversation(safeMessages);
+    return res.status(200).json({ success: true, data: result });
+  } catch (err: any) {
+    if (err.message === 'GLM_UNAVAILABLE') {
+      return res.status(503).json({
+        success: false,
+        error: { code: 'GLM_UNAVAILABLE', message: 'GLM is not configured or did not return a response' },
+      });
+    }
+
+    if (err.message === 'GLM_INVALID_JOB_DRAFT' || err.message === 'GLM_INVALID_RESPONSE') {
+      return res.status(502).json({
+        success: false,
+        error: { code: err.message, message: 'GLM returned an invalid job draft response' },
+      });
+    }
+
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }
 }

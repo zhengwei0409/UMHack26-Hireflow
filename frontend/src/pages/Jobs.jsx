@@ -3,25 +3,141 @@ import { Link } from 'react-router-dom';
 import api from '../services/api';
 
 const inputClassName =
-  'min-h-[44px] w-full rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-black focus:ring-2 focus:ring-black/10';
+  'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
 
 const textareaClassName = `${inputClassName} min-h-[120px] py-3`;
+const buttonBaseClassName =
+  'inline-flex cursor-pointer items-center justify-center rounded-lg font-semibold tracking-[-0.01em] transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
+const primaryButtonClassName = `${buttonBaseClassName} primary-cta min-h-11 px-4 text-sm focus:ring-zinc-950`;
+const secondaryButtonClassName = `${buttonBaseClassName} min-h-11 border border-zinc-200 bg-white px-4 text-sm text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 focus:ring-zinc-300`;
+const compactSecondaryButtonClassName = `${buttonBaseClassName} min-h-9 border border-zinc-200 px-3 text-xs focus:ring-zinc-300`;
 
-const formatStatusLabel = (status) =>
-  String(status || 'OPEN')
-    .toLowerCase()
-    .replaceAll('_', ' ')
-    .replace(/\b\w/g, (letter) => letter.toUpperCase());
+const initialChatMessages = [
+  {
+    role: 'assistant',
+    content:
+      'Describe the role you want to create. Include title, department, location, responsibilities, and requirements if you have them.',
+  },
+];
 
-const getStatusTone = (status) => {
-  const normalized = String(status || '').toLowerCase();
+const statusOptions = [
+  ['ALL', 'All roles'],
+  ['OPEN', 'Open'],
+  ['CLOSED', 'Closed'],
+];
 
-  if (normalized.includes('closed')) {
-    return 'border-zinc-300 bg-zinc-100 text-zinc-700';
-  }
+const getApplicantCount = (job) => Number(job._count?.candidates || job.candidateCount || 0);
 
-  return 'border-zinc-200 bg-zinc-50 text-zinc-700';
+const formatDate = (date) => {
+  if (!date) return 'No date';
+
+  return new Date(date).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
 };
+
+const getRequirements = (requirements) => {
+  if (Array.isArray(requirements)) return requirements.filter(Boolean);
+  if (typeof requirements === 'string') return requirements.split('\n').filter((requirement) => requirement.trim());
+  return [];
+};
+
+const JobRow = ({ job, index, onClose }) => {
+  const applicantCount = getApplicantCount(job);
+  const requirements = getRequirements(job.requirements).slice(0, 3);
+  const threshold = Number(job.autoScreenThreshold ?? 60);
+
+  return (
+    <article
+      className="job-row grid gap-5 px-5 py-5 lg:grid-cols-[minmax(300px,1fr)_150px_150px_132px]"
+      style={{ animationDelay: `${Math.min(index * 45, 240)}ms` }}
+    >
+      <div className="min-w-0">
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="rounded-md bg-zinc-100 px-2 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-600">
+            {job.department || 'General'}
+          </span>
+        </div>
+
+        <h3 className="mt-3 truncate text-lg font-black tracking-[-0.03em] text-zinc-950">{job.title}</h3>
+        <p className="mt-1 text-sm font-semibold text-zinc-500">
+          {job.location || 'Location TBD'} / Posted {formatDate(job.createdAt)}
+        </p>
+        <p className="mt-3 line-clamp-2 max-w-3xl text-sm font-semibold leading-6 text-zinc-600">
+          {job.description || 'No job description added yet.'}
+        </p>
+
+        {requirements.length > 0 && (
+          <div className="mt-4 flex flex-wrap gap-2">
+            {requirements.map((requirement) => (
+              <span
+                key={`${job.id}-${requirement}`}
+                className="rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs font-bold text-zinc-600"
+              >
+                {requirement}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="job-metric-pop grid content-start gap-1">
+        <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Applicants</p>
+        <p className="text-3xl font-black tracking-tight text-zinc-950">{applicantCount}</p>
+      </div>
+
+      <div className="grid content-start gap-3">
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">AI threshold</p>
+          <p className="mt-1 text-sm font-black text-zinc-950">{threshold}% pass score</p>
+        </div>
+        <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
+          <div className="h-full rounded-full bg-zinc-950" style={{ width: `${Math.min(100, Math.max(0, threshold))}%` }} />
+        </div>
+        <p className="text-xs font-semibold text-zinc-500">Shortlist {job.shortlistSize ?? 10}</p>
+      </div>
+
+      <div className="flex flex-col items-start gap-3 lg:items-end">
+        <Link
+          to={`/jobs/${job.id}`}
+          className={`${buttonBaseClassName} job-open-button min-h-10 w-32 bg-zinc-950 px-4 text-sm !text-white focus:ring-zinc-950`}
+          style={{ color: '#fff' }}
+        >
+          <span className="!text-white">See details</span>
+        </Link>
+        <button
+          type="button"
+          className={`${compactSecondaryButtonClassName} w-32 bg-zinc-50 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-800`}
+          onClick={() => onClose(job.id)}
+        >
+          Close role
+        </button>
+      </div>
+    </article>
+  );
+};
+
+const ClosedJobRow = ({ job, index }) => (
+  <article
+    className="job-row grid items-center gap-3 px-5 py-4 md:grid-cols-[minmax(220px,1fr)_150px_120px_auto]"
+    style={{ animationDelay: `${Math.min(index * 35, 180)}ms` }}
+  >
+    <div className="min-w-0">
+      <h3 className="truncate text-sm font-black text-zinc-800">{job.title}</h3>
+      <p className="mt-1 text-xs font-bold text-zinc-500">{job.department || 'General'} / {job.location || 'Location TBD'}</p>
+    </div>
+    <p className="text-xs font-bold text-zinc-500">Closed role</p>
+    <p className="text-xs font-bold text-zinc-500">Posted {formatDate(job.createdAt)}</p>
+    <Link
+      to={`/jobs/${job.id}`}
+      className={`${compactSecondaryButtonClassName} bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950`}
+    >
+      See details
+    </Link>
+  </article>
+);
 
 const Jobs = () => {
   const [jobs, setJobs] = useState([]);
@@ -29,15 +145,10 @@ const Jobs = () => {
   const [error, setError] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [formData, setFormData] = useState({
-    title: '',
-    department: '',
-    description: '',
-    requirements: '',
-    location: '',
-    autoScreenThreshold: 60,
-    shortlistSize: 10,
-  });
+  const [filters, setFilters] = useState({ status: 'ALL', query: '' });
+  const [chatMessages, setChatMessages] = useState(initialChatMessages);
+  const [chatInput, setChatInput] = useState('');
+  const [createdJob, setCreatedJob] = useState(null);
 
   useEffect(() => {
     loadJobs();
@@ -54,37 +165,77 @@ const Jobs = () => {
     }
   };
 
-  const handleSubmit = async (e) => {
+  const handleChatSubmit = async (e) => {
     e.preventDefault();
+    const nextInput = chatInput.trim();
+    if (!nextInput || submitting) return;
+
     setError('');
     setSubmitting(true);
+    setCreatedJob(null);
+
+    const nextMessages = [...chatMessages, { role: 'user', content: nextInput }];
+    setChatMessages(nextMessages);
+    setChatInput('');
 
     try {
-      const data = {
-        ...formData,
-        requirements: formData.requirements.split('\n').filter((requirement) => requirement.trim()),
-      };
-      await api.jobs.create(data);
-      setShowForm(false);
-      setFormData({
-        title: '',
-        department: '',
-        description: '',
-        requirements: '',
-        location: '',
-        autoScreenThreshold: 60,
-        shortlistSize: 10,
-      });
-      await loadJobs();
+      const draftRes = await api.jobs.draftFromChat(nextMessages);
+      const draft = draftRes.data;
+
+      if (draft.status === 'READY' && draft.job) {
+        setChatMessages((current) => [
+          ...current,
+          {
+            role: 'assistant',
+            content: `${draft.reply || 'I have enough information.'}\n\nCreating job: ${draft.job.title}`,
+          },
+        ]);
+
+        const createRes = await api.jobs.create(draft.job);
+        setCreatedJob(createRes.data);
+        setChatMessages((current) => [
+          ...current,
+          {
+            role: 'assistant',
+            content: `Created job: ${createRes.data.title}. You can open it from the jobs list.`,
+          },
+        ]);
+        await loadJobs();
+        setShowForm(false);
+        setChatMessages(initialChatMessages);
+        setChatInput('');
+      } else {
+        setChatMessages((current) => [
+          ...current,
+          {
+            role: 'assistant',
+            content: draft.reply || 'Please provide more details for the job.',
+          },
+        ]);
+      }
     } catch (err) {
       setError(err.message);
+      setChatMessages((current) => [
+        ...current,
+        {
+          role: 'assistant',
+          content: 'Could not create the job from this chat. Please add more details or try again.',
+        },
+      ]);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to close this job?')) return;
+  const resetJobChat = () => {
+    setChatMessages(initialChatMessages);
+    setChatInput('');
+    setCreatedJob(null);
+    setError('');
+  };
+
+  const handleClose = async (id) => {
+    if (!confirm('Close this job? Candidates can no longer apply.')) return;
 
     try {
       await api.jobs.delete(id);
@@ -94,289 +245,284 @@ const Jobs = () => {
     }
   };
 
-  const visibleJobs = useMemo(
-    () => jobs.filter((job) => String(job.status || '').toUpperCase() !== 'CLOSED'),
-    [jobs],
+  const filteredJobs = useMemo(() => {
+    const query = filters.query.trim().toLowerCase();
+
+    return jobs.filter((job) => {
+      const statusMatch =
+        filters.status === 'ALL' || String(job.status || 'OPEN').toUpperCase() === filters.status;
+      const searchText = [job.title, job.department, job.location, job.description].filter(Boolean).join(' ').toLowerCase();
+      const queryMatch = !query || searchText.includes(query);
+
+      return statusMatch && queryMatch;
+    });
+  }, [filters, jobs]);
+
+  const openJobs = useMemo(
+    () => filteredJobs.filter((job) => String(job.status || 'OPEN').toUpperCase() === 'OPEN'),
+    [filteredJobs],
+  );
+
+  const closedJobs = useMemo(
+    () => filteredJobs.filter((job) => String(job.status || 'OPEN').toUpperCase() === 'CLOSED'),
+    [filteredJobs],
   );
 
   const metrics = useMemo(() => {
-    const openRoles = visibleJobs.filter((job) => String(job.status).toUpperCase() === 'OPEN').length;
-    const applicants = visibleJobs.reduce((sum, job) => sum + Number(job._count?.candidates || 0), 0);
-    const avgThreshold = visibleJobs.length
-      ? Math.round(
-          visibleJobs.reduce((sum, job) => sum + Number(job.autoScreenThreshold ?? 60), 0) / visibleJobs.length,
-        )
-      : 60;
+    const openRoles = jobs.filter((job) => String(job.status || 'OPEN').toUpperCase() === 'OPEN').length;
+    const closedRoles = jobs.filter((job) => String(job.status || 'OPEN').toUpperCase() === 'CLOSED').length;
 
     return [
+      { label: 'Total roles', value: jobs.length },
       { label: 'Open roles', value: openRoles },
-      { label: 'Active postings', value: visibleJobs.length },
-      { label: 'Applicants tracked', value: applicants },
-      { label: 'Avg. AI threshold', value: `${avgThreshold}%` },
+      { label: 'Closed roles', value: closedRoles },
     ];
-  }, [visibleJobs]);
-
-  if (loading) {
-    return (
-      <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="rounded-md border border-zinc-200 bg-white px-6 py-10 text-center text-sm font-semibold text-zinc-500">
-          Loading roles...
-        </div>
-      </div>
-    );
-  }
+  }, [jobs]);
 
   return (
-    <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
-      <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <section className="overflow-hidden rounded-md border border-zinc-200 bg-white">
-          <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8 lg:py-8">
-            <div className="max-w-3xl">
-              <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Hiring workspace</p>
-              <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-4xl">
-                Job positions
-              </h1>
-              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-zinc-600 sm:text-base">
-                Create roles, tune the AI prescreen rules, and keep the hiring pipeline organized in one place.
+    <div className="min-h-full bg-[#f5f5f5] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
+      <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
+        <section className="job-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
+          <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+            <div>
+              <h1 className="text-3xl font-black tracking-[-0.05em] text-zinc-950 sm:text-4xl">Jobs</h1>
+              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-zinc-600">
+                View open and closed roles. Use filters to find a job and open its details.
               </p>
-            </div>
-
-            <div className="flex items-start justify-start lg:justify-end">
-              <button
-                type="button"
-                className="primary-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition"
-                onClick={() => setShowForm((current) => !current)}
-              >
-                {showForm ? 'Close form' : 'Create job'}
-              </button>
-            </div>
-          </div>
-
-          <div className="grid gap-px border-t border-zinc-200 bg-zinc-200 sm:grid-cols-2 xl:grid-cols-4">
-            {metrics.map((metric) => (
-              <div key={metric.label} className="bg-zinc-50 px-6 py-4">
-                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">{metric.label}</p>
-                <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">{metric.value}</p>
+              <div className="mt-5 grid gap-5 sm:grid-cols-3">
+                {metrics.map((metric, index) => (
+                  <div
+                    key={metric.label}
+                    className="job-metric-pop min-w-24"
+                    style={{ animationDelay: `${120 + index * 55}ms` }}
+                  >
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-zinc-500">{metric.label}</p>
+                    <p className="mt-1 text-3xl font-black tracking-tight text-zinc-950">{metric.value}</p>
+                  </div>
+                ))}
               </div>
-            ))}
+            </div>
+
+            <div className="grid gap-3 sm:grid-cols-[180px_minmax(220px,1fr)] xl:w-[560px]">
+              <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                <span>Status</span>
+                <select
+                  className={inputClassName}
+                  value={filters.status}
+                  onChange={(e) => setFilters({ ...filters, status: e.target.value })}
+                >
+                  {statusOptions.map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                <span>Search</span>
+                <input
+                  type="search"
+                  className={inputClassName}
+                  value={filters.query}
+                  onChange={(e) => setFilters({ ...filters, query: e.target.value })}
+                  placeholder="Title, team, location"
+                />
+              </label>
+            </div>
           </div>
         </section>
 
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <p className="text-sm font-bold text-zinc-500">
+            Showing <span className="text-zinc-950">{filteredJobs.length}</span> of {jobs.length} roles
+          </p>
+          <button
+            type="button"
+            className={primaryButtonClassName}
+            onClick={() => setShowForm((current) => !current)}
+          >
+            {showForm ? 'Close form' : 'Create job'}
+          </button>
+        </div>
+
         {showForm && (
-          <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
+          <section className="job-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-6 flex flex-col gap-2">
-              <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Create a new role</h2>
-              <p className="text-sm font-medium leading-6 text-zinc-600">
-                Start with the essentials first. The AI prescreen settings can be adjusted again later from the job
-                detail page.
+              <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">GLM intake</p>
+              <h2 className="text-2xl font-black tracking-[-0.04em] text-zinc-950">Create job with chat</h2>
+              <p className="text-sm font-semibold leading-6 text-zinc-600">
+                GLM will ask for missing details. When enough information is available, the job is created automatically.
               </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="grid gap-5">
-              <div className="grid gap-5 md:grid-cols-2">
-                <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                  <span>Job title</span>
-                  <input
-                    type="text"
-                    className={inputClassName}
-                    value={formData.title}
-                    onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    required
-                    placeholder="Software Engineer"
-                  />
-                </label>
-
-                <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                  <span>Department</span>
-                  <input
-                    type="text"
-                    className={inputClassName}
-                    value={formData.department}
-                    onChange={(e) => setFormData({ ...formData, department: e.target.value })}
-                    required
-                    placeholder="Engineering"
-                  />
-                </label>
-              </div>
-
-              <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                <span>Description</span>
-                <textarea
-                  className={textareaClassName}
-                  value={formData.description}
-                  onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                  required
-                  placeholder="Describe what the role owns, what success looks like, and who the person will work with."
-                  rows={5}
-                />
-              </label>
-
-              <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                <span>Requirements</span>
-                <textarea
-                  className={textareaClassName}
-                  value={formData.requirements}
-                  onChange={(e) => setFormData({ ...formData, requirements: e.target.value })}
-                  placeholder={'3+ years experience\nReact\nNode.js'}
-                  rows={5}
-                />
-              </label>
-
-              <div className="grid gap-5 md:grid-cols-3">
-                <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                  <span>Location</span>
-                  <input
-                    type="text"
-                    className={inputClassName}
-                    value={formData.location}
-                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
-                    required
-                    placeholder="Kuala Lumpur"
-                  />
-                </label>
-
-                <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                  <span>AI screen threshold</span>
-                  <input
-                    type="number"
-                    min="0"
-                    max="100"
-                    className={inputClassName}
-                    value={formData.autoScreenThreshold}
-                    onChange={(e) => setFormData({ ...formData, autoScreenThreshold: Number(e.target.value) })}
-                  />
-                </label>
-
-                <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                  <span>Shortlist size</span>
-                  <input
-                    type="number"
-                    min="1"
-                    max="50"
-                    className={inputClassName}
-                    value={formData.shortlistSize}
-                    onChange={(e) => setFormData({ ...formData, shortlistSize: Number(e.target.value) })}
-                  />
-                </label>
+            <div className="grid gap-4">
+              <div className="job-chat-surface max-h-[420px] overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50 p-4">
+                <div className="grid gap-3">
+                  {chatMessages.map((message, index) => (
+                    <div
+                      key={`${message.role}-${index}-${message.content.slice(0, 12)}`}
+                      className={`job-chat-bubble max-w-[88%] rounded-xl px-4 py-3 text-sm font-semibold leading-6 ${
+                        message.role === 'user'
+                          ? 'job-chat-bubble-user justify-self-end bg-zinc-950 text-white'
+                          : 'job-chat-bubble-assistant justify-self-start border border-zinc-200 bg-white text-zinc-700'
+                      }`}
+                      style={{ animationDelay: `${Math.min(index * 45, 220)}ms` }}
+                    >
+                      <p className="whitespace-pre-line">{message.content}</p>
+                    </div>
+                  ))}
+                  {submitting && (
+                    <div className="job-chat-bubble job-chat-bubble-assistant justify-self-start rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-500">
+                      <span className="inline-flex items-center gap-2">
+                        <span>GLM is checking the job details</span>
+                        <span className="job-thinking-dots" aria-hidden="true">
+                          <span />
+                          <span />
+                          <span />
+                        </span>
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {error && (
-                <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+                <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                   {error}
                 </div>
               )}
 
-              <div className="flex flex-wrap items-center gap-3 pt-2">
-                <button
-                  type="submit"
-                  className="primary-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition disabled:cursor-wait disabled:opacity-70"
-                  disabled={submitting}
-                >
-                  {submitting ? 'Creating...' : 'Create job'}
-                </button>
+              {createdJob && (
+                <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm font-semibold text-emerald-800">
+                  Job created: {createdJob.title}
+                </div>
+              )}
+
+              <form onSubmit={handleChatSubmit} className="grid gap-3">
+                <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                  <span>Message GLM</span>
+                  <textarea
+                    className={`job-chat-composer ${textareaClassName} min-h-[104px]`}
+                    value={chatInput}
+                    onChange={(e) => setChatInput(e.target.value)}
+                    placeholder="Example: Create a Backend Engineer role for Engineering in Kuala Lumpur. They will build APIs, work with PostgreSQL, and need 3+ years Node.js experience."
+                    rows={4}
+                    disabled={submitting}
+                  />
+                </label>
+
+                <div className="flex flex-wrap items-center gap-3 pt-1">
+                  <button
+                    type="submit"
+                    className={primaryButtonClassName}
+                    disabled={submitting || !chatInput.trim()}
+                  >
+                    {submitting ? 'Checking...' : 'Send to GLM'}
+                  </button>
+                  <button
+                    type="button"
+                    className={secondaryButtonClassName}
+                    onClick={resetJobChat}
+                    disabled={submitting}
+                  >
+                    Start over
+                  </button>
+                </div>
+              </form>
+
+              <div className="flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-4">
                 <button
                   type="button"
-                  className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+                  className={secondaryButtonClassName}
                   onClick={() => setShowForm(false)}
                 >
-                  Cancel
+                  Close panel
                 </button>
               </div>
-            </form>
+            </div>
           </section>
         )}
 
         {error && !showForm && (
-          <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
             {error}
           </div>
         )}
 
-        {visibleJobs.length === 0 ? (
-          <section className="rounded-md border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
-            <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">No roles yet</p>
-            <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-950">Create your first job posting</h2>
-            <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-6 text-zinc-600">
-              Once a role exists, applicants, AI screening, and ranked shortlist data will start collecting here.
+        {loading ? (
+          <div className="rounded-xl border border-zinc-200 bg-white px-6 py-14 text-center text-sm font-bold text-zinc-500">
+            Loading jobs...
+          </div>
+        ) : filteredJobs.length === 0 ? (
+          <section className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
+            <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">No jobs found</p>
+            <h2 className="mt-3 text-2xl font-black tracking-tight text-zinc-950">
+              {jobs.length === 0 ? 'Create your first job listing' : 'No role matches this view'}
+            </h2>
+            <p className="mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 text-zinc-600">
+              {jobs.length === 0
+                ? 'Create a role before collecting applications.'
+                : 'Change the search or status filter to see more listed jobs.'}
             </p>
-            <button
-              type="button"
-              className="primary-cta mt-6 inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition"
-              onClick={() => setShowForm(true)}
-            >
-              Create job
-            </button>
+            {jobs.length === 0 && (
+              <button
+                type="button"
+                className={`${primaryButtonClassName} mt-6`}
+                onClick={() => setShowForm(true)}
+              >
+                Create job
+              </button>
+            )}
           </section>
         ) : (
-          <section className="grid gap-4 xl:grid-cols-2">
-            {visibleJobs.map((job) => {
-              const applicantCount = Number(job._count?.candidates || 0);
-
-              return (
-                <article
-                  key={job.id}
-                  className="flex h-full flex-col rounded-md border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
-                >
-                  <div className="flex flex-wrap items-start justify-between gap-3">
-                    <div className="space-y-2">
-                      <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-zinc-500">
-                        {job.department || 'General'}
-                      </div>
-                      <div>
-                        <h3 className="text-xl font-extrabold tracking-tight text-zinc-950">{job.title}</h3>
-                        <p className="mt-1 text-sm font-semibold text-zinc-500">{job.location || 'Location TBD'}</p>
-                      </div>
-                    </div>
-
-                    <span
-                      className={`inline-flex rounded-full border px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] ${getStatusTone(job.status)}`}
-                    >
-                      {formatStatusLabel(job.status)}
-                    </span>
+          <>
+            {openJobs.length > 0 && (
+              <section className="job-page-enter rounded-xl border border-zinc-200 bg-white shadow-sm">
+                <div className="flex flex-col gap-2 border-b border-zinc-200 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">Active roles</p>
+                    <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-zinc-950">Open jobs</h2>
                   </div>
+                  <p className="text-sm font-black text-zinc-500">{openJobs.length} roles</p>
+                </div>
 
-                  <p className="mt-5 line-clamp-4 text-sm font-medium leading-6 text-zinc-600">
-                    {job.description || 'No job description added yet.'}
-                  </p>
+                <div className="divide-y divide-zinc-100">
+                  {openJobs.map((job, index) => (
+                    <JobRow key={job.id} job={job} index={index} onClose={handleClose} />
+                  ))}
+                </div>
+              </section>
+            )}
 
-                  <div className="mt-6 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">Applicants</p>
-                      <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">{applicantCount}</p>
-                    </div>
-                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">AI threshold</p>
-                      <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">
-                        {job.autoScreenThreshold ?? 60}%
-                      </p>
-                    </div>
-                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
-                      <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">Shortlist</p>
-                      <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">
-                        {job.shortlistSize ?? 10}
-                      </p>
-                    </div>
+            {closedJobs.length > 0 && (
+              <section className="job-page-enter overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                <div className="flex flex-col gap-2 border-b border-zinc-100 bg-zinc-50 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">Archive</p>
+                    <h2 className="mt-1 text-lg font-black tracking-tight text-zinc-800">Closed roles</h2>
                   </div>
+                  <p className="text-sm font-black text-zinc-500">{closedJobs.length} roles</p>
+                </div>
 
-                  <div className="mt-6 flex flex-wrap gap-3">
-                    <Link
-                      to={`/jobs/${job.id}`}
-                      className="primary-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition"
-                    >
-                      View role details
-                    </Link>
-                    <button
-                      type="button"
-                      className="inline-flex min-h-11 items-center justify-center rounded-md border border-red-200 bg-red-50 px-4 text-sm font-extrabold text-red-700 transition hover:bg-red-100"
-                      onClick={() => handleDelete(job.id)}
-                    >
-                      Close role
-                    </button>
-                  </div>
-                </article>
-              );
-            })}
-          </section>
+                <div className="divide-y divide-zinc-100">
+                  {closedJobs.map((job, index) => (
+                    <ClosedJobRow key={job.id} job={job} index={index} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {openJobs.length === 0 && closedJobs.length === 0 && (
+              <section className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
+                <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">No jobs found</p>
+                <h2 className="mt-3 text-2xl font-black tracking-tight text-zinc-950">No role matches this view</h2>
+                <p className="mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 text-zinc-600">
+                  Change the search or status filter to see more listed jobs.
+                </p>
+              </section>
+            )}
+          </>
         )}
       </div>
     </div>
