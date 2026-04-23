@@ -58,6 +58,13 @@ export const jobs = {
       body: JSON.stringify(data),
     }).then(handleResponse),
 
+  draftFromChat: (messages) =>
+    fetch(`${API_BASE}/jobs/draft-from-chat`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ messages }),
+    }).then(handleResponse),
+
   update: (id, data) =>
     fetch(`${API_BASE}/jobs/${id}`, {
       method: 'PATCH',
