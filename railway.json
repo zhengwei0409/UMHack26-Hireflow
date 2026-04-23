@@ -1,0 +1,11 @@
+{
+  "$schema": "https://railway.app/railway.schema.json",
+  "build": {
+    "dockerfilePath": "docker/Dockerfile.simple",
+    "builder": "DOCKER"
+  },
+  "deploy": {
+    "numReplicas": 1,
+    "healthCheckPath": "/health"
+  }
+}
