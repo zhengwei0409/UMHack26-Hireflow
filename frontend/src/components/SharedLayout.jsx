@@ -30,15 +30,6 @@ const navItems = [
       </svg>
     ),
   },
-  {
-    to: '/shortlist',
-    label: 'Ranked Shortlist',
-    icon: (
-      <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
-        <path fill="currentColor" d="M10 2l2.4 4.8L18 7.6l-4 3.9.9 5.5L10 14.5l-4.9 2.5.9-5.5-4-3.9 5.6-.8L10 2Z" />
-      </svg>
-    ),
-  },
 ];
 
 const getInitial = (user) => (user?.name || user?.email || 'HF').slice(0, 1).toUpperCase();
@@ -58,8 +49,9 @@ const SharedLayout = () => {
         <aside className="hidden min-h-screen flex-col border-r border-zinc-200 bg-white lg:flex">
           <div className="border-b border-zinc-200 px-5 py-5">
             <Link to="/dashboard" className="flex items-center gap-3">
-              <span className="grid h-10 w-10 shrink-0 place-items-center rounded-md bg-black text-white">
-                <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden="true">
+              <span className="auth-logo-mark relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-black text-white transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(17,24,39,0.22)]">
+                <span className="pointer-events-none absolute inset-0 auth-logo-glow" aria-hidden="true" />
+                <svg viewBox="0 0 20 20" className="relative h-5 w-5 transition duration-300 hover:scale-105" aria-hidden="true">
                   <path fill="currentColor" d="M4 4h5v5H4V4Zm7 0h5v5h-5V4ZM4 11h5v5H4v-5Zm7 0h5v5h-5v-5Z" />
                 </svg>
               </span>
@@ -114,8 +106,9 @@ const SharedLayout = () => {
           <header className="sticky top-0 z-20 border-b border-zinc-200 bg-white/95 px-4 py-3 backdrop-blur lg:hidden">
             <div className="flex items-center justify-between gap-3">
               <Link to="/dashboard" className="flex min-w-0 items-center gap-3">
-                <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-black text-white">
-                  <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden="true">
+                <span className="auth-logo-mark relative grid h-9 w-9 shrink-0 place-items-center overflow-hidden rounded-md bg-black text-white transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(17,24,39,0.22)]">
+                  <span className="pointer-events-none absolute inset-0 auth-logo-glow" aria-hidden="true" />
+                  <svg viewBox="0 0 20 20" className="relative h-5 w-5 transition duration-300 hover:scale-105" aria-hidden="true">
                     <path fill="currentColor" d="M4 4h5v5H4V4Zm7 0h5v5h-5V4ZM4 11h5v5H4v-5Zm7 0h5v5h-5v-5Z" />
                   </svg>
                 </span>

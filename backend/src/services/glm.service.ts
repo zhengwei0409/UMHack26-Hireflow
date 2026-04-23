@@ -35,6 +35,24 @@ export interface InterviewAnswerScore {
   evaluator: 'GLM' | 'FALLBACK';
 }
 
+export interface JobDraftData {
+  title: string;
+  department: string;
+  description: string;
+  requirements: string[];
+  location: string;
+  autoScreenThreshold: number;
+  shortlistSize: number;
+}
+
+export interface JobDraftConversationResult {
+  status: 'NEEDS_INFO' | 'READY';
+  reply: string;
+  missingFields: string[];
+  job?: JobDraftData;
+  evaluator: 'GLM';
+}
+
 interface GLMMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -66,6 +84,30 @@ function extractJsonFromResponse(text: string): any {
   } catch {
     return null;
   }
+}
+
+function normalizeJobDraft(raw: any): JobDraftData | null {
+  if (!raw || typeof raw !== 'object') return null;
+
+  const requirements = Array.isArray(raw.requirements)
+    ? raw.requirements.filter((item: unknown) => typeof item === 'string' && item.trim()).map((item: string) => item.trim())
+    : [];
+
+  const draft = {
+    title: typeof raw.title === 'string' ? raw.title.trim() : '',
+    department: typeof raw.department === 'string' ? raw.department.trim() : '',
+    description: typeof raw.description === 'string' ? raw.description.trim() : '',
+    requirements,
+    location: typeof raw.location === 'string' ? raw.location.trim() : '',
+    autoScreenThreshold: clampScore(Number(raw.autoScreenThreshold ?? 60)),
+    shortlistSize: Math.min(50, Math.max(1, Math.round(Number(raw.shortlistSize ?? 10)))),
+  };
+
+  if (!draft.title || !draft.department || !draft.description || !draft.location || draft.requirements.length === 0) {
+    return null;
+  }
+
+  return draft;
 }
 
 async function callLLM(messages: GLMMessage[], temperature = 0.5): Promise<string | null> {
@@ -214,6 +256,97 @@ ${jobInfo.salary ? `Salary: ${jobInfo.salary}` : ''}`;
     subject: `Offer Letter - ${jobInfo.title}`,
     body: `We are pleased to offer you the ${jobInfo.title} role in ${jobInfo.department} based in ${jobInfo.location}. Please reply to this email and our HR team will coordinate the next steps.`,
   };
+}
+
+export async function draftJobFromConversation(messages: GLMMessage[]): Promise<JobDraftConversationResult> {
+  const transcript = messages
+    .filter((message) => message.content?.trim())
+    .map((message) => `${message.role.toUpperCase()}: ${message.content.trim()}`)
+    .join('\n');
+
+  const prompt = `You are an HR job intake assistant inside an internal dashboard.
+Your job is to collect enough information to create a job record.
+
+Required fields:
+- title
+- department
+- description
+- requirements as an array of strings
+- location
+
+Optional fields:
+- autoScreenThreshold number from 0 to 100, default 60
+- shortlistSize number from 1 to 50, default 10
+
+Rules:
+- If required fields are missing or unclear, ask one short follow-up question.
+- If enough information is present, return structured data ready for the create job endpoint.
+- If HR says to "help", "generate the rest", or similar, infer a practical description and requirements from the available details instead of asking for label formatting.
+- If HR asks you to think of a title or description, generate it from the conversation instead of asking for that same field.
+- Treat casual natural language as valid input. Do not require "Title:" or other labels.
+- You are responsible for the decision. Do not wait for perfect wording if the job can be reasonably inferred.
+- Do not use marketing copy.
+- Keep descriptions practical and candidate-facing.
+
+Return JSON only in one of these shapes:
+{
+  "status": "NEEDS_INFO",
+  "reply": "short question for HR",
+  "missingFields": ["title"]
+}
+
+or
+
+{
+  "status": "READY",
+  "reply": "I have enough information to create the job.",
+  "missingFields": [],
+  "job": {
+    "title": "string",
+    "department": "string",
+    "description": "string",
+    "requirements": ["string"],
+    "location": "string",
+    "autoScreenThreshold": 60,
+    "shortlistSize": 10
+  }
+}
+
+Conversation:
+${transcript || 'No messages yet.'}`;
+
+  const response = await callLLM([{ role: 'user', content: prompt }], 0.2);
+  if (!response) {
+    throw new Error('GLM_UNAVAILABLE');
+  }
+
+  const parsed = extractJsonFromResponse(response);
+
+  if (parsed?.status === 'READY') {
+    const job = normalizeJobDraft(parsed.job);
+    if (job) {
+      return {
+        status: 'READY',
+        reply: typeof parsed.reply === 'string' ? parsed.reply : 'I have enough information to create the job.',
+        missingFields: [],
+        job,
+        evaluator: 'GLM',
+      };
+    }
+
+    throw new Error('GLM_INVALID_JOB_DRAFT');
+  }
+
+  if (parsed?.status === 'NEEDS_INFO') {
+    return {
+      status: 'NEEDS_INFO',
+      reply: typeof parsed.reply === 'string' ? parsed.reply : 'Please provide more job details.',
+      missingFields: Array.isArray(parsed.missingFields) ? parsed.missingFields.filter(Boolean).map(String) : [],
+      evaluator: 'GLM',
+    };
+  }
+
+  throw new Error('GLM_INVALID_RESPONSE');
 }
 
 function fallbackInterviewQuestions(jobTitle: string, requirements: string[], seniorityHint: string): InterviewQuestionDraft[] {
