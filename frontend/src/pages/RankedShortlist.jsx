@@ -11,19 +11,11 @@ const formatStatusLabel = (status) =>
 const getStatusTone = (status) => {
   const normalized = String(status || '').toLowerCase();
 
-  if (normalized.includes('scored') || normalized.includes('done')) {
-    return 'border-emerald-200 bg-emerald-50 text-emerald-700';
-  }
-
-  if (normalized.includes('pending') || normalized.includes('progress')) {
-    return 'border-amber-200 bg-amber-50 text-amber-700';
-  }
-
   if (normalized.includes('rejected') || normalized.includes('failed')) {
-    return 'border-red-200 bg-red-50 text-red-700';
+    return 'border-red-200 bg-red-50 text-red-600';
   }
 
-  return 'border-zinc-200 bg-zinc-100 text-zinc-700';
+  return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
 const RankedShortlist = () => {
@@ -99,7 +91,7 @@ const RankedShortlist = () => {
   if (loading) {
     return (
       <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
-        <div className="rounded-[28px] border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
+        <div className="rounded-md border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
           Loading ranked shortlist...
         </div>
       </div>
@@ -109,7 +101,7 @@ const RankedShortlist = () => {
   return (
     <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
-        <section className="overflow-hidden rounded-[28px] border border-zinc-200 bg-white">
+        <section className="overflow-hidden rounded-md border border-zinc-200 bg-white">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8 lg:py-8">
             <div className="max-w-3xl">
               <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">AI evaluation</p>
@@ -151,7 +143,7 @@ const RankedShortlist = () => {
         )}
 
         {rows.length === 0 ? (
-          <section className="rounded-[28px] border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
+          <section className="rounded-md border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
             <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">No ranked sessions</p>
             <h2 className="mt-3 text-2xl font-extrabold tracking-tight text-zinc-950">No scored AI interviews yet</h2>
             <p className="mx-auto mt-3 max-w-xl text-sm font-medium leading-6 text-zinc-600">
@@ -166,7 +158,7 @@ const RankedShortlist = () => {
               return (
                 <article
                   key={row.id}
-                  className="rounded-[24px] border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
+                  className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md"
                 >
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="space-y-2">
@@ -189,19 +181,19 @@ const RankedShortlist = () => {
                   </div>
 
                   <div className="mt-5 grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
                       <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">Job</p>
                       <p className="mt-2 text-sm font-extrabold text-zinc-950">
                         {row.candidate.job?.title || row.jobId}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
                       <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">Score</p>
                       <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">
                         {row.overallScore ?? '-'}
                       </p>
                     </div>
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 px-4 py-3">
+                    <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3">
                       <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">
                         Shortlist
                       </p>

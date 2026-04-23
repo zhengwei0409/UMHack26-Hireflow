@@ -2,7 +2,6 @@ import crypto from 'crypto';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { generateInterviewQuestions, type InterviewQuestionDraft } from './glm.service';
-import { executeCode } from './code-exec.service';
 import { scoreSession } from './ranking.service';
 import { STATES } from '../workflow/states';
 import { transitionCandidateStatus } from './workflow-state.service';
@@ -29,28 +28,8 @@ function sanitizeQuestion(question: {
   };
 }
 
-function extractTestCases(expectedAnswer: Prisma.JsonValue | null) {
-  if (expectedAnswer && typeof expectedAnswer === 'object' && !Array.isArray(expectedAnswer) && 'testCases' in expectedAnswer) {
-    const raw = (expectedAnswer as { testCases?: unknown }).testCases;
-    if (Array.isArray(raw)) {
-      return raw
-        .filter(
-          (testCase): testCase is { input: string; expectedOutput: string } =>
-            !!testCase &&
-            typeof testCase === 'object' &&
-            'input' in testCase &&
-            'expectedOutput' in testCase &&
-            typeof (testCase as { input: unknown }).input === 'string' &&
-            typeof (testCase as { expectedOutput: unknown }).expectedOutput === 'string',
-        )
-        .map((testCase) => ({
-          input: testCase.input,
-          expectedOutput: testCase.expectedOutput,
-        }));
-    }
-  }
-
-  return [];
+function isFinalInterviewStatus(status: string) {
+  return status === 'COMPLETED' || status === 'SCORED';
 }
 
 async function buildQuestionDrafts(candidateId: string) {
@@ -104,7 +83,6 @@ async function createSession(candidateId: string, questionDrafts: InterviewQuest
           sequence: index + 1,
           prompt: draft.prompt,
           choices: draft.choices as Prisma.InputJsonValue | undefined,
-          expectedAnswer: draft.expectedAnswer as Prisma.InputJsonValue | undefined,
           metadata: draft.metadata as Prisma.InputJsonValue | undefined,
         })),
       },
@@ -168,16 +146,20 @@ export async function getInterviewSessionByToken(token: string) {
     throw new Error('SESSION_NOT_FOUND');
   }
 
+  const attemptLocked = isFinalInterviewStatus(session.status);
+
   return {
     id: session.id,
     inviteToken: session.inviteToken,
     status: session.status,
+    attemptLocked,
     startedAt: session.startedAt,
     completedAt: session.completedAt,
     scoredAt: session.scoredAt,
     overallScore: session.overallScore,
     rankPosition: session.rankPosition,
     isShortlisted: session.isShortlisted,
+    scoreBreakdown: session.scoreBreakdown,
     candidate: {
       fullName: session.candidate.fullName,
       email: session.candidate.email,
@@ -185,20 +167,22 @@ export async function getInterviewSessionByToken(token: string) {
       jobTitle: session.candidate.job.title,
       jobId: session.candidate.job.id,
     },
-    questions: session.questions.map((question) => ({
-      ...sanitizeQuestion(question),
-      answer: question.answers[0]
-        ? {
-            rawAnswer: question.answers[0].rawAnswer,
-            selectedOption: question.answers[0].selectedOption,
-            codeSubmission: question.answers[0].codeSubmission,
-            programmingLanguage: question.answers[0].programmingLanguage,
-            executionResult: question.answers[0].executionResult,
-            aiScore: question.answers[0].aiScore,
-            aiReasoning: question.answers[0].aiReasoning,
-          }
-        : null,
-    })),
+    questions: attemptLocked
+      ? []
+      : session.questions.map((question) => ({
+          ...sanitizeQuestion(question),
+          answer: question.answers[0]
+            ? {
+                rawAnswer: question.answers[0].rawAnswer,
+                selectedOption: question.answers[0].selectedOption,
+                codeSubmission: question.answers[0].codeSubmission,
+                programmingLanguage: question.answers[0].programmingLanguage,
+                aiScore: question.answers[0].aiScore,
+                aiReasoning: question.answers[0].aiReasoning,
+                metadata: question.answers[0].metadata,
+              }
+            : null,
+        })),
     proctorFlags: session.proctorEvents.length,
   };
 }
@@ -210,6 +194,10 @@ export async function startInterviewSession(token: string) {
 
   if (!session) {
     throw new Error('SESSION_NOT_FOUND');
+  }
+
+  if (isFinalInterviewStatus(session.status)) {
+    throw new Error('SESSION_ALREADY_COMPLETED');
   }
 
   if (session.status === 'IN_PROGRESS') {
@@ -260,6 +248,10 @@ export async function upsertInterviewAnswer(
     throw new Error('SESSION_NOT_FOUND');
   }
 
+  if (session.status !== 'IN_PROGRESS') {
+    throw new Error(isFinalInterviewStatus(session.status) ? 'SESSION_ALREADY_COMPLETED' : 'SESSION_NOT_STARTED');
+  }
+
   const question = session.questions.find((item) => item.id === input.questionId);
   if (!question) {
     throw new Error('QUESTION_NOT_FOUND');
@@ -296,62 +288,6 @@ export async function upsertInterviewAnswer(
   };
 }
 
-export async function executeInterviewCode(
-  token: string,
-  input: {
-    questionId: string;
-    language: string;
-    sourceCode: string;
-  },
-) {
-  const session = await prisma.interviewSession.findUnique({
-    where: { inviteToken: token },
-    include: { questions: true },
-  });
-
-  if (!session) {
-    throw new Error('SESSION_NOT_FOUND');
-  }
-
-  const question = session.questions.find((item) => item.id === input.questionId);
-  if (!question) {
-    throw new Error('QUESTION_NOT_FOUND');
-  }
-
-  if (question.type !== 'DSA') {
-    throw new Error('QUESTION_NOT_CODE');
-  }
-
-  const executionResult = await executeCode({
-    language: input.language,
-    sourceCode: input.sourceCode,
-    testCases: extractTestCases(question.expectedAnswer as Prisma.JsonValue | null),
-  });
-
-  await prisma.candidateAnswer.upsert({
-    where: {
-      sessionId_questionId: {
-        sessionId: session.id,
-        questionId: input.questionId,
-      },
-    },
-    update: {
-      codeSubmission: input.sourceCode,
-      programmingLanguage: input.language,
-      executionResult: executionResult as unknown as Prisma.InputJsonValue,
-    },
-    create: {
-      sessionId: session.id,
-      questionId: input.questionId,
-      codeSubmission: input.sourceCode,
-      programmingLanguage: input.language,
-      executionResult: executionResult as unknown as Prisma.InputJsonValue,
-    },
-  });
-
-  return executionResult;
-}
-
 export async function submitInterviewSession(token: string) {
   const session = await prisma.interviewSession.findUnique({
     where: { inviteToken: token },
@@ -359,6 +295,10 @@ export async function submitInterviewSession(token: string) {
 
   if (!session) {
     throw new Error('SESSION_NOT_FOUND');
+  }
+
+  if (session.status !== 'IN_PROGRESS') {
+    throw new Error(isFinalInterviewStatus(session.status) ? 'SESSION_ALREADY_COMPLETED' : 'SESSION_NOT_STARTED');
   }
 
   await prisma.$transaction(async (tx) => {
@@ -380,9 +320,74 @@ export async function submitInterviewSession(token: string) {
     });
   });
 
-  const result = await scoreSession(session.id);
+  scoreSession(session.id).catch((err) => {
+    console.error('Failed to score AI interview session', {
+      sessionId: session.id,
+      error: err instanceof Error ? err.message : err,
+    });
+  });
+
   return {
     sessionId: session.id,
-    ...result,
+    status: 'COMPLETED',
+    scoringPending: true,
   };
+}
+
+export async function attachInterviewRecordings(
+  token: string,
+  input: {
+    screenRecording?: {
+      path: string;
+      filename: string;
+      mimeType: string;
+      size: number;
+    };
+    cameraRecording?: {
+      path: string;
+      filename: string;
+      mimeType: string;
+      size: number;
+    };
+    metadata?: Record<string, unknown>;
+  },
+) {
+  const session = await prisma.interviewSession.findUnique({
+    where: { inviteToken: token },
+  });
+
+  if (!session) {
+    throw new Error('SESSION_NOT_FOUND');
+  }
+
+  if (session.status !== 'IN_PROGRESS') {
+    throw new Error(isFinalInterviewStatus(session.status) ? 'SESSION_ALREADY_COMPLETED' : 'SESSION_NOT_STARTED');
+  }
+
+  const existingMetadata =
+    session.metadata && typeof session.metadata === 'object' && !Array.isArray(session.metadata)
+      ? (session.metadata as Record<string, unknown>)
+      : {};
+
+  const recordings = {
+    ...(existingMetadata.recordings && typeof existingMetadata.recordings === 'object' && !Array.isArray(existingMetadata.recordings)
+      ? (existingMetadata.recordings as Record<string, unknown>)
+      : {}),
+    uploadedAt: new Date().toISOString(),
+    ...(input.screenRecording ? { screenRecording: input.screenRecording } : {}),
+    ...(input.cameraRecording ? { cameraRecording: input.cameraRecording } : {}),
+  };
+
+  const updated = await prisma.interviewSession.update({
+    where: { id: session.id },
+    data: {
+      metadata: {
+        ...existingMetadata,
+        ...(input.metadata ? { recordingContext: input.metadata } : {}),
+        recordings,
+      } as Prisma.InputJsonValue,
+    },
+  });
+
+  return updated.metadata;
 }

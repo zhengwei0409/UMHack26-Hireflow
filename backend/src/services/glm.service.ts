@@ -4,8 +4,8 @@
 import fs from 'fs';
 import path from 'path';
 
-const DEEPSEEK_API_BASE = process.env.DEEPSEEK_API_BASE || 'https://api.deepseek.com/v1';
-const DEEPSEEK_API_KEY = process.env.DEEPSEEK_API_KEY;
+const GLM_API_BASE = process.env.GLM_API_BASE || 'https://api.ilmu.ai/v1';
+const GLM_API_KEY = process.env.GLM_API_KEY;
 
 export interface GLMAnalysis {
   score: number;
@@ -24,15 +24,15 @@ export interface InterviewQuestionDraft {
   type: 'DSA' | 'MCQ' | 'BEHAVIORAL';
   prompt: string;
   choices?: string[];
-  expectedAnswer?: string | { answer: string; rubric?: string; testCases?: Array<{ input: string; expectedOutput: string }> };
   metadata?: Record<string, unknown>;
 }
 
-export interface BehavioralScore {
+export interface InterviewAnswerScore {
   score: number;
   reasoning: string;
   strengths: string[];
   risks: string[];
+  evaluator: 'GLM' | 'FALLBACK';
 }
 
 interface GLMMessage {
@@ -69,18 +69,18 @@ function extractJsonFromResponse(text: string): any {
 }
 
 async function callLLM(messages: GLMMessage[], temperature = 0.5): Promise<string | null> {
-  if (!DEEPSEEK_API_KEY) {
+  if (!GLM_API_KEY) {
     return null;
   }
 
-  const response = await fetch(`${DEEPSEEK_API_BASE}/chat/completions`, {
+  const response = await fetch(`${GLM_API_BASE}/chat/completions`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      Authorization: `Bearer ${DEEPSEEK_API_KEY}`,
+      Authorization: `Bearer ${GLM_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'llama-3.3-70b-versatile',
+      model: 'ilmu-glm-5.1',
       messages,
       temperature,
     }),
@@ -88,7 +88,7 @@ async function callLLM(messages: GLMMessage[], temperature = 0.5): Promise<strin
 
   if (!response.ok) {
     const error = await response.text();
-    throw new Error(`DeepSeek API error: ${response.status} - ${error}`);
+    throw new Error(`GLM API error: ${response.status} - ${error}`);
   }
 
   const data = (await response.json()) as { choices: Array<{ message: { content: string } }> };
@@ -224,48 +224,29 @@ function fallbackInterviewQuestions(jobTitle: string, requirements: string[], se
     {
       type: 'DSA',
       prompt: `Build a function that returns the first non-repeating character in a string for a ${jobTitle} role. Explain the time and space complexity in a short note.`,
-      expectedAnswer: {
-        answer: 'Any correct implementation using counting or indexed frequency tracking.',
-        rubric: 'Prefer linear-time reasoning and clean edge-case handling.',
-        testCases: [
-          { input: 'leetcode', expectedOutput: 'l' },
-          { input: 'aabb', expectedOutput: '' },
-        ],
-      },
       metadata: { difficulty: seniority === 'senior' ? 'medium' : 'easy', focusArea },
     },
     {
       type: 'DSA',
       prompt: `Given an array of integers, return the length of the longest strictly increasing contiguous subarray. Write code and mention how you would test it.`,
-      expectedAnswer: {
-        answer: 'Single-pass scan that tracks current streak length and best streak length.',
-        rubric: 'Linear scan, correct reset behavior, and basic test coverage explanation.',
-        testCases: [
-          { input: '[1,2,3,1,2]', expectedOutput: '3' },
-          { input: '[5,4,3]', expectedOutput: '1' },
-        ],
-      },
       metadata: { difficulty: 'medium', focusArea: 'arrays' },
     },
     {
       type: 'MCQ',
       prompt: 'What is the average-case time complexity of hash table lookup?',
       choices: ['O(1)', 'O(log n)', 'O(n)', 'O(n log n)'],
-      expectedAnswer: 'O(1)',
       metadata: { category: 'data structures' },
     },
     {
       type: 'MCQ',
       prompt: 'Which SQL clause is typically used to filter grouped results?',
       choices: ['WHERE', 'ORDER BY', 'HAVING', 'LIMIT'],
-      expectedAnswer: 'HAVING',
       metadata: { category: 'databases' },
     },
     {
       type: 'MCQ',
       prompt: 'Which operating system concept allows many programs to appear to run at the same time on one CPU?',
       choices: ['Paging', 'Context switching', 'Deadlock', 'Caching'],
-      expectedAnswer: 'Context switching',
       metadata: { category: 'operating systems' },
     },
     {
@@ -291,7 +272,7 @@ export async function generateInterviewQuestions(input: {
   const fallback = fallbackInterviewQuestions(input.jobTitle, input.requirements, seniorityHint);
 
   const prompt = `Generate an interview pack for a software candidate. Return JSON only as an array of 7 objects with keys:
-type ("DSA" | "MCQ" | "BEHAVIORAL"), prompt, choices (for MCQ only), expectedAnswer, metadata.
+type ("DSA" | "MCQ" | "BEHAVIORAL"), prompt, choices (for MCQ only), metadata.
 
 Requirements:
 - 2 DSA questions
@@ -314,7 +295,6 @@ CV summary: ${input.cvSummary ?? 'N/A'}`;
           type: item.type,
           prompt: item.prompt,
           choices: Array.isArray(item.choices) ? item.choices : undefined,
-          expectedAnswer: item.expectedAnswer,
           metadata: item.metadata && typeof item.metadata === 'object' ? item.metadata : undefined,
         })) as InterviewQuestionDraft[];
     }
@@ -325,7 +305,7 @@ CV summary: ${input.cvSummary ?? 'N/A'}`;
   return fallback;
 }
 
-function fallbackBehavioralScore(answer: string): BehavioralScore {
+function fallbackBehavioralScore(answer: string): InterviewAnswerScore {
   const normalized = answer.toLowerCase();
   const starSignals = ['situation', 'task', 'action', 'result'].filter((signal) => normalized.includes(signal));
   const score = clampScore(
@@ -343,15 +323,57 @@ function fallbackBehavioralScore(answer: string): BehavioralScore {
         : 'The answer is still high level. It would be stronger with clearer ownership, trade-offs, and concrete results.',
     strengths: starSignals.length > 0 ? [`Includes STAR-like structure with signals: ${starSignals.join(', ')}`] : ['Some relevant experience is described.'],
     risks: score >= 70 ? ['Could still use more measurable outcome detail.'] : ['Needs more concrete actions and outcomes to evaluate real ownership.'],
+    evaluator: 'FALLBACK',
   };
 }
 
-export async function scoreBehavioralAnswer(input: {
+function fallbackInterviewAnswerScore(input: {
+  type: 'DSA' | 'MCQ' | 'BEHAVIORAL';
+  answerText?: string;
+  selectedOption?: string;
+  codeSubmission?: string;
+}): InterviewAnswerScore {
+  if (input.type === 'DSA') {
+    const codeLength = input.codeSubmission?.trim().length ?? 0;
+    const hasCodeStructure = /\b(function|def|class|return|for|while|if|const|let|public|static)\b/i.test(input.codeSubmission ?? '');
+    const score = clampScore((codeLength >= 40 ? 45 : 15) + (hasCodeStructure ? 25 : 0));
+    return {
+      score,
+      reasoning: 'Fallback scoring estimated code quality from submitted code structure because GLM was unavailable.',
+      strengths: hasCodeStructure ? ['Submission contains recognizable programming structure.'] : [],
+      risks: ['Fallback did not execute or deeply reason about correctness. Configure GLM for agentic evaluation.'],
+      evaluator: 'FALLBACK',
+    };
+  }
+
+  if (input.type === 'MCQ') {
+    const answered = !!input.selectedOption;
+    return {
+      score: answered ? 50 : 0,
+      reasoning: answered
+        ? 'Fallback gave neutral credit for an answered MCQ because GLM was unavailable and no answer key was used.'
+        : 'No MCQ option was selected.',
+      strengths: answered ? ['Candidate selected an option.'] : [],
+      risks: ['Fallback did not use an expected answer. Configure GLM for reasoning-based MCQ evaluation.'],
+      evaluator: 'FALLBACK',
+    };
+  }
+
+  return fallbackBehavioralScore(input.answerText ?? '');
+}
+
+export async function scoreInterviewAnswer(input: {
   jobTitle: string;
+  type: 'DSA' | 'MCQ' | 'BEHAVIORAL';
   question: string;
-  answer: string;
-}): Promise<BehavioralScore> {
-  const prompt = `Score this candidate answer for a software interview. Return JSON only:
+  answerText?: string;
+  selectedOption?: string;
+  choices?: unknown;
+  codeSubmission?: string;
+  programmingLanguage?: string;
+}): Promise<InterviewAnswerScore> {
+  const prompt = `You are a GLM interview evaluator agent. Score this candidate answer for a software interview.
+Return JSON only:
 {
   "score": number,
   "reasoning": "string",
@@ -359,9 +381,20 @@ export async function scoreBehavioralAnswer(input: {
   "risks": ["string"]
 }
 
+Scoring rules:
+- Score must be 0 to 100.
+- For DSA, evaluate correctness, algorithmic thinking, edge cases, complexity, and code clarity from the candidate response.
+- For MCQ, infer the best answer from the question and choices, then evaluate the selected option. Do not rely on a provided answer key.
+- For BEHAVIORAL, evaluate STAR structure, ownership, impact, clarity, and role relevance.
+
 Job title: ${input.jobTitle}
+Question type: ${input.type}
 Question: ${input.question}
-Answer: ${input.answer}`;
+Choices: ${JSON.stringify(input.choices ?? null)}
+Selected option: ${input.selectedOption ?? 'N/A'}
+Written answer: ${input.answerText ?? 'N/A'}
+Programming language: ${input.programmingLanguage ?? 'N/A'}
+Code submission: ${input.codeSubmission ?? 'N/A'}`;
 
   try {
     const response = await callLLM([{ role: 'user', content: prompt }], 0.2);
@@ -372,11 +405,12 @@ Answer: ${input.answer}`;
         reasoning: typeof parsed.reasoning === 'string' ? parsed.reasoning : '',
         strengths: Array.isArray(parsed.strengths) ? parsed.strengths : [],
         risks: Array.isArray(parsed.risks) ? parsed.risks : [],
+        evaluator: 'GLM',
       };
     }
   } catch (error) {
-    console.error('LLM scoreBehavioralAnswer error, using fallback:', error);
+    console.error('LLM scoreInterviewAnswer error, using fallback:', error);
   }
 
-  return fallbackBehavioralScore(input.answer);
+  return fallbackInterviewAnswerScore(input);
 }
