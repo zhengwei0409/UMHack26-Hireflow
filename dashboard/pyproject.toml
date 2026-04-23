@@ -1,0 +1,23 @@
+[project]
+name = "joinly-dashboard"
+version = "0.1.0"
+description = "Meeting Bot Dashboard for joinly"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "joinly-client>=0.1.18",
+    "uvicorn[standard]>=0.32.0",
+]
+
+[tool.uv.sources]
+joinly-client = { workspace = true }
+
+[project.scripts]
+joinly-dash = "dashboard.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["dashboard"]
