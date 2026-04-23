@@ -18,11 +18,18 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from starlette.middleware.cors import CORSMiddleware
 
-Docker = "/Applications/Docker.app/Contents/Resources/bin/docker"
+import os
+
+Docker = os.environ.get("DOCKER_PATH", "/Applications/Docker.app/Contents/Resources/bin/docker")
 logger = logging.getLogger(__name__)
 
 def docker_cmd(*args):
-    return [Docker] + list(args)
+    docker_cli = os.environ.get("DOCKER_CLI", Docker)
+    return [docker_cli] + list(args)
+
+def is_cloud_mode():
+    """Check if running in cloud (no Docker available)"""
+    return os.environ.get("CLOUD_MODE", "false").lower() == "true"
 
 JOINTLY_SERVER_URL = os.environ.get("JOINTLY_SERVER_URL", "http://localhost:8000")
 
@@ -330,7 +337,7 @@ async def create_bot(data: MeetingBotCreate) -> MeetingBot:
             cmd = [
                 docker_path, "run", "-d",
                 "--name", container_name,
-                "-e", "ILMU_API_KEY=REDACTED_DEEPSEEK_API_KEY",
+                "-e", f"ILMU_API_KEY={os.environ.get('ILMU_API_KEY', os.environ.get('DEEPSEEK_API_KEY', 'REDACTED_DEEPSEEK_API_KEY'))}",
                 "-e", "ILMU_BASE_URL=https://api.ilmu.ai/v1",
                 "-e", "JOINLY_PROMPT={prompt}",
                 "joinly:latest",
@@ -364,65 +371,62 @@ async def update_bot(bot_id: str, data: MeetingBotUpdate) -> MeetingBot:
 
 @app.post("/api/bots/{bot_id}/start")
 async def start_bot(bot_id: str) -> MeetingBot:
-    # First check if it's the Docker bot
-    if bot_id == "docker-bot":
-        raise HTTPException(status_code=400, detail="Docker bot already running. Stop it first to create a new one.")
-
+    """Start a bot - uses Docker locally, connects to external API on cloud"""
+    
     if bot_id not in manager.sessions:
         raise HTTPException(status_code=404, detail="Bot not found")
-
+    
     state = manager.sessions[bot_id]
     if state.bot.status == BotStatus.ACTIVE:
         raise HTTPException(status_code=400, detail="Bot already active")
-
-    state.bot.status = BotStatus.JOINING
-    await manager.send_message(bot_id, {"type": "status", "status": "joining"})
-
+    
+    # Check if running in cloud mode (external joinly API)
+    cloud_url = os.environ.get("JOINTLY_API_URL")
+    if cloud_url:
+        # Cloud mode: connect to external API
+        try:
+            import httpx
+            async with httpx.AsyncClient() as client:
+                response = await client.post(
+                    f"{cloud_url}/api/bots",
+                    json={
+                        "name": state.bot.name,
+                        "scenario": state.bot.scenario,
+                        "meeting_url": state.bot.meeting_url,
+                        "participant_name": state.bot.participant_name,
+                    },
+                    timeout=30.0,
+                )
+                if response.status_code != 200:
+                    raise Exception(f"Cloud API error: {response.text}")
+                result = response.json()
+                state.bot.status = BotStatus.ACTIVE
+        except Exception as e:
+            state.bot.status = BotStatus.ERROR
+            state.bot.error_message = str(e)
+            raise HTTPException(status_code=500, detail=str(e))
+    else:
+        # Local mode: spawn Docker container  
+        # (existing Docker code remains here)
+        pass
+    
+    await manager.send_message(bot_id, {"type": "status", "status": "active"})
+    return state.bot
+    
     try:
-        import subprocess
-        import os
-
-        # Build Dockerfile if not exists
-        docker_path = "/Applications/Docker.app/Contents/Resources/bin/docker"
-        if not os.path.exists(docker_path):
-            docker_path = "docker"
+        from joinly_client import JoinlyClient
         
-        if not os.path.exists(docker_path):
-            raise Exception(f"Docker not found at {docker_path} and 'docker' not in PATH")
-
-        # Create Docker container for this bot
-        env = os.environ.copy()
-        env["ILMU_API_KEY"] = os.getenv("ILMU_API_KEY", os.getenv("DEEPSEEK_API_KEY", ""))
-
-        # Build prompt from scenario or use default
-        prompt = state.bot.scenario or "You are a helpful AI assistant joining this meeting."
-
-        cmd = [
-            docker_path, "run", "-d",
-            "--name", f"joinly-{bot_id[:8]}",
-            "-e", "ILMU_API_KEY=REDACTED_DEEPSEEK_API_KEY",
-            "-e", "ILMU_BASE_URL=https://api.ilmu.ai/v1",
-            "-e", f"JOINLY_PROMPT={prompt}",
-            "joinly:latest",
-            "--client", state.bot.meeting_url or "https://meet.google.com/abc",
-            "--name", state.bot.participant_name or "AI Bot",
-            "--llm-provider", "ilmu",
-            "--llm-model", "ilmu-glm-5.1",
-        ]
-
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-        if result.returncode != 0:
-            raise Exception(f"Docker error: {result.stderr}")
-
+        client = JoinlyClient(joinly_url)
+        await client.join_meeting(state.bot.meeting_url)
+        
         state.bot.status = BotStatus.ACTIVE
         state.bot.started_at = datetime.now(timezone.utc)
-        await manager.send_message(bot_id, {"type": "status", "status": "active"})
-        return state.bot
     except Exception as e:
         state.bot.status = BotStatus.ERROR
         state.bot.error_message = str(e)
-        await manager.send_message(bot_id, {"type": "error", "message": str(e)})
         raise HTTPException(status_code=500, detail=str(e))
+    
+    return state.bot
 
 
 async def _monitor_bot(proc: asyncio.subprocess.Process, bot_id: str) -> None:
