@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
 import api from '../services/api';
+import { authButtonTextClassName } from '../styles/buttonStyles';
 
 const getPasswordHint = (value) => {
   const hasMinLength = value.length >= 8;
@@ -23,6 +24,7 @@ const authHighlights = [
 ];
 
 const Login = () => {
+  const shellRef = useRef(null);
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -34,6 +36,7 @@ const Login = () => {
   const { login, register } = useAuth();
   const navigate = useNavigate();
   const passwordHint = getPasswordHint(password);
+  const mode = isRegister ? 'register' : 'login';
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -83,9 +86,35 @@ const Login = () => {
     { label: 'Special symbol', active: /[^A-Za-z0-9]/.test(password) },
   ];
 
+  const handlePointerMove = (event) => {
+    const node = shellRef.current;
+    if (!node) return;
+
+    const rect = node.getBoundingClientRect();
+    const x = event.clientX - rect.left;
+    const y = event.clientY - rect.top;
+
+    node.style.setProperty('--auth-cursor-x', `${x}px`);
+    node.style.setProperty('--auth-cursor-y', `${y}px`);
+    node.style.setProperty('--auth-grid-active', '1');
+  };
+
+  const handlePointerLeave = () => {
+    const node = shellRef.current;
+    if (!node) return;
+
+    node.style.setProperty('--auth-grid-active', '0');
+  };
+
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#f2f3f5] text-[#121212]">
+    <div
+      ref={shellRef}
+      className="relative min-h-screen overflow-hidden bg-[#f2f3f5] text-[#121212]"
+      onPointerMove={handlePointerMove}
+      onPointerLeave={handlePointerLeave}
+    >
       <div className="pointer-events-none absolute inset-0 auth-grid opacity-80" aria-hidden="true" />
+      <div className="pointer-events-none absolute inset-0 auth-grid-spotlight" aria-hidden="true" />
       <div
         className="pointer-events-none absolute -left-28 top-24 h-72 w-72 rounded-full bg-[#111827]/10 blur-3xl auth-float"
         aria-hidden="true"
@@ -115,21 +144,18 @@ const Login = () => {
           </span>
         </button>
 
-        <div className="hidden items-center gap-3 rounded-full border border-white/70 bg-white/65 p-1 shadow-[0_12px_35px_rgba(17,24,39,0.08)] backdrop-blur-xl sm:flex">
+        <div className="auth-toggle-shell hidden sm:flex">
+          <span className={`auth-toggle-indicator ${isRegister ? 'is-register' : 'is-login'}`} aria-hidden="true" />
           <button
             type="button"
-            className={`rounded-full px-4 py-2 text-sm font-extrabold transition ${
-              !isRegister ? 'bg-[#111827] text-white shadow-lg' : 'text-[#777777] hover:text-[#111827]'
-            }`}
+            className={`auth-toggle-button ${authButtonTextClassName} ${!isRegister ? 'is-active' : ''}`}
             onClick={() => switchMode('login')}
           >
             Log In
           </button>
           <button
             type="button"
-            className={`rounded-full px-4 py-2 text-sm font-extrabold transition ${
-              isRegister ? 'bg-[#111827] text-white shadow-lg' : 'text-[#777777] hover:text-[#111827]'
-            }`}
+            className={`auth-toggle-button ${authButtonTextClassName} ${isRegister ? 'is-active' : ''}`}
             onClick={() => switchMode('register')}
           >
             Sign Up
@@ -157,8 +183,12 @@ const Login = () => {
                 style={{ animationDelay: `${180 + index * 110}ms` }}
               >
                 <span className="text-sm font-black uppercase tracking-[0.18em] text-[#777777]">{item}</span>
-                <span className="grid h-9 w-9 place-items-center rounded-full border border-[#d7d7d7] bg-white/70 text-[#111827] transition group-hover:-translate-y-1 group-hover:bg-[#111827] group-hover:text-white">
-                  →
+                <span
+                  className="pointer-events-none inline-flex items-center gap-2 text-[#9a9a9a] transition duration-300 group-hover:translate-x-1 group-hover:text-[#111827]"
+                  aria-hidden="true"
+                >
+                  <span className="h-px w-8 bg-current opacity-45 transition duration-300 group-hover:w-10 group-hover:opacity-80" />
+                  <span className="text-base leading-none">↗</span>
                 </span>
               </div>
             ))}
@@ -184,214 +214,197 @@ const Login = () => {
           className="relative mx-auto w-full max-w-[480px] overflow-hidden rounded-xl border border-white/80 bg-white/78 px-6 py-7 shadow-[0_32px_90px_rgba(17,24,39,0.14)] backdrop-blur-2xl animate-auth-rise sm:px-8 sm:py-9"
           aria-labelledby="auth-title"
         >
-          <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-[#111827]/35 to-transparent auth-sheen" />
-          <div className="mb-7 flex rounded-full bg-[#f2f3f5] p-1 sm:hidden">
-            <button
-              type="button"
-              className={`min-h-11 flex-1 rounded-full text-sm font-extrabold transition ${
-                !isRegister ? 'bg-[#111827] text-white shadow-lg' : 'text-[#777777]'
-              }`}
-              onClick={() => switchMode('login')}
-            >
-              Log In
-            </button>
-            <button
-              type="button"
-              className={`min-h-11 flex-1 rounded-full text-sm font-extrabold transition ${
-                isRegister ? 'bg-[#111827] text-white shadow-lg' : 'text-[#777777]'
-              }`}
-              onClick={() => switchMode('register')}
-            >
-              Sign Up
-            </button>
+          <div className="pointer-events-none absolute inset-x-5 top-0 h-[2px] overflow-hidden rounded-full bg-[#111827]/8" aria-hidden="true">
+            <div className="h-full w-40 rounded-full bg-gradient-to-r from-transparent via-[#111827]/80 to-transparent auth-sheen" />
           </div>
-
-          <div className="mb-6 text-center">
-            <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[#4d4a82]">
-              {isRegister ? 'Start your workspace' : 'Welcome back'}
-            </p>
-            <h2 id="auth-title" className="text-4xl font-black leading-tight tracking-[-0.06em] text-[#191919]">
-              {isRegister ? 'Create account' : 'Log in to HireFlow'}
-            </h2>
-            <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-[#777777]">
-              {isRegister
-                ? 'Create your HR command center and start moving candidates with clarity.'
-                : 'Continue screening, ranking, and managing interviews from one workspace.'}
-            </p>
-          </div>
-
-          {error && (
-            <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800 animate-auth-pop">
-              {error}
+          <div key={mode} className="auth-mode-panel">
+            <div className="mb-6 text-center">
+              <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[#4d4a82]">
+                {isRegister ? 'Start your workspace' : 'Welcome back'}
+              </p>
+              <h2 id="auth-title" className="text-4xl font-black leading-tight tracking-[-0.06em] text-[#191919]">
+                {isRegister ? 'Create account' : 'Log in to HireFlow'}
+              </h2>
+              <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-[#777777]">
+                {isRegister
+                  ? 'Create your HR command center and start moving candidates with clarity.'
+                  : 'Continue screening, ranking, and managing interviews from one workspace.'}
+              </p>
             </div>
-          )}
 
-          <form onSubmit={handleSubmit} className="grid gap-4">
-            {isRegister && (
-              <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
-                <span>Name</span>
-                <input
-                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="Alex Rivera"
-                  autoComplete="name"
-                />
-              </label>
-            )}
-
-            <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
-              <span>Email address</span>
-              <input
-                className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                placeholder="name@company.com"
-                autoComplete="email"
-              />
-            </label>
-
-            <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
-              <span>Password</span>
-              <input
-                className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                required
-                placeholder="Password"
-                autoComplete={isRegister ? 'new-password' : 'current-password'}
-              />
-            </label>
-
-            {isRegister && (
-              <>
-                <div className="-mt-1 flex flex-wrap gap-2">
-                  {passwordChecks.map((check) => (
-                    <span
-                      key={check.label}
-                      className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${
-                        check.active
-                          ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                          : 'border-[#dedede] bg-white text-[#8a8a8a]'
-                      }`}
-                    >
-                      {check.label}
-                    </span>
-                  ))}
-                </div>
-
-                <p className={`text-sm font-bold ${passwordHint.isValid ? 'text-emerald-600' : 'text-[#8a8a8a]'}`}>
-                  {passwordHint.message}
-                </p>
-
-                <label className="flex items-start gap-3 rounded-lg border border-[#ececec] bg-[#f8f8f8]/70 px-4 py-3 text-xs font-semibold leading-relaxed text-[#777777]">
-                  <input
-                    className="mt-0.5 h-5 w-5 shrink-0 rounded border-[#cfcfcf] accent-black"
-                    type="checkbox"
-                    checked={agreeToTerms}
-                    onChange={(e) => setAgreeToTerms(e.target.checked)}
-                    required
-                  />
-                  <span>
-                    I agree to the{' '}
-                    <a className="font-black text-[#273b72]" href="#">
-                      Terms of Service
-                    </a>{' '}
-                    and{' '}
-                    <a className="font-black text-[#273b72]" href="#">
-                      Privacy Policy
-                    </a>
-                    .
-                  </span>
-                </label>
-              </>
-            )}
-
-            {!isRegister && (
-              <div className="flex items-center justify-between gap-4">
-                <label className="inline-flex items-center gap-2.5 text-sm font-bold text-[#777777]">
-                  <input className="h-4 w-4 accent-black" type="checkbox" />
-                  <span>Remember Me</span>
-                </label>
-                <button
-                  type="button"
-                  className="shrink-0 text-xs font-black normal-case tracking-normal text-[#4d4a82] transition hover:text-[#111827]"
-                >
-                  Forgot Password
-                </button>
+            {error && (
+              <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-800 animate-auth-pop">
+                {error}
               </div>
             )}
 
-            <button
-              type="submit"
-              className="group relative mt-1 inline-flex min-h-14 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-0 bg-[#111827] text-sm font-black uppercase tracking-[0.12em] text-white shadow-[0_22px_45px_rgba(17,24,39,0.22)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#171717] hover:shadow-[0_28px_60px_rgba(17,24,39,0.28)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
-              disabled={loading}
-              aria-busy={loading}
-            >
-              <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition duration-700 group-hover:translate-x-full" />
-              <span className="relative inline-flex items-center gap-2">
-                {loading && (
-                  <span
-                    className="h-4 w-4 rounded-full border-2 border-white/35 border-t-white auth-spin"
-                    aria-hidden="true"
+            <form onSubmit={handleSubmit} className="grid gap-4">
+              {isRegister && (
+                <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
+                  <span>Name</span>
+                  <input
+                    className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    required
+                    placeholder="Alex Rivera"
+                    autoComplete="name"
                   />
-                )}
-                {loading ? 'Please wait...' : isRegister ? 'Sign Up' : 'Log In'}
-              </span>
-            </button>
-          </form>
+                </label>
+              )}
 
-          <div className="my-6 flex items-center gap-3 text-center text-xs font-black tracking-[0.16em] text-[#8a8a8a] before:h-px before:flex-1 before:bg-[#dedede] after:h-px after:flex-1 after:bg-[#dedede]">
-            <span>OR CONTINUE WITH</span>
-          </div>
+              <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
+                <span>Email address</span>
+                <input
+                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  placeholder="name@company.com"
+                  autoComplete="email"
+                />
+              </label>
 
-          <button
-            type="button"
-            className="inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-[#d4d4d4] bg-white/90 text-sm font-black text-[#2a2a2a] shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-[#111827]/30 hover:bg-white hover:shadow-[0_16px_38px_rgba(17,24,39,0.10)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
-            onClick={handleGoogleSignIn}
-            disabled={googleLoading}
-            aria-busy={googleLoading}
-          >
-            {googleLoading ? (
-              <span className="h-4 w-4 rounded-full border-2 border-[#111827]/20 border-t-[#111827] auth-spin" aria-hidden="true" />
-            ) : (
-              <svg className="h-4 w-4" viewBox="0 0 18 18" aria-hidden="true">
-                <path
-                  fill="#4285F4"
-                  d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"
+              <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
+                <span>Password</span>
+                <input
+                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                  type="password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  placeholder="Password"
+                  autoComplete={isRegister ? 'new-password' : 'current-password'}
                 />
-                <path
-                  fill="#34A853"
-                  d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.35 0-4.34-1.59-5.05-3.72H.93v2.33A9 9 0 0 0 9 18z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.16.28-1.7V4.97H.93A9 9 0 0 0 0 9c0 1.45.34 2.82.93 4.03l3.02-2.33z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .93 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z"
-                />
-              </svg>
-            )}
-            {googleLoading ? 'Connecting...' : 'Google'}
-          </button>
+              </label>
 
-          <p className="mt-6 text-center text-sm font-bold text-[#777777]">
-            {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
+              {isRegister && (
+                <>
+                  <div className="-mt-1 flex flex-wrap gap-2">
+                    {passwordChecks.map((check) => (
+                      <span
+                        key={check.label}
+                        className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${
+                          check.active
+                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+                            : 'border-[#dedede] bg-white text-[#8a8a8a]'
+                        }`}
+                      >
+                        {check.label}
+                      </span>
+                    ))}
+                  </div>
+
+                  <p className={`text-sm font-bold ${passwordHint.isValid ? 'text-emerald-600' : 'text-[#8a8a8a]'}`}>
+                    {passwordHint.message}
+                  </p>
+
+                  <label className="flex items-start gap-3 rounded-lg border border-[#ececec] bg-[#f8f8f8]/70 px-4 py-3 text-xs font-semibold leading-relaxed text-[#777777]">
+                    <input
+                      className="mt-0.5 h-5 w-5 shrink-0 rounded border-[#cfcfcf] accent-black"
+                      type="checkbox"
+                      checked={agreeToTerms}
+                      onChange={(e) => setAgreeToTerms(e.target.checked)}
+                      required
+                    />
+                    <span>
+                      I agree to the{' '}
+                      <a className="font-black text-[#273b72]" href="#">
+                        Terms of Service
+                      </a>{' '}
+                      and{' '}
+                      <a className="font-black text-[#273b72]" href="#">
+                        Privacy Policy
+                      </a>
+                      .
+                    </span>
+                  </label>
+                </>
+              )}
+
+              {!isRegister && (
+                <div className="flex items-center justify-between gap-4">
+                  <label className="inline-flex items-center gap-2.5 text-sm font-bold text-[#777777]">
+                    <input className="h-4 w-4 accent-black" type="checkbox" />
+                    <span>Remember Me</span>
+                  </label>
+                  <button
+                    type="button"
+                    className="shrink-0 text-xs font-semibold tracking-[-0.01em] text-[#4d4a82] transition hover:text-[#111827]"
+                  >
+                    Forgot Password
+                  </button>
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className="group relative mt-1 inline-flex min-h-14 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-0 bg-[#111827] text-sm font-semibold uppercase tracking-[0.08em] text-white shadow-[0_22px_45px_rgba(17,24,39,0.22)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#171717] hover:shadow-[0_28px_60px_rgba(17,24,39,0.28)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
+                disabled={loading}
+                aria-busy={loading}
+              >
+                <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/20 to-transparent transition duration-700 group-hover:translate-x-full" />
+                <span className="relative inline-flex items-center gap-2">
+                  {loading && (
+                    <span
+                      className="h-4 w-4 rounded-full border-2 border-white/35 border-t-white auth-spin"
+                      aria-hidden="true"
+                    />
+                  )}
+                  {loading ? 'Please wait...' : isRegister ? 'Sign Up' : 'Log In'}
+                </span>
+              </button>
+            </form>
+
+            <div className="my-6 flex items-center gap-3 text-center text-xs font-black tracking-[0.16em] text-[#8a8a8a] before:h-px before:flex-1 before:bg-[#dedede] after:h-px after:flex-1 after:bg-[#dedede]">
+              <span>OR CONTINUE WITH</span>
+            </div>
+
             <button
               type="button"
-              className="font-black text-[#171717] underline decoration-[#171717]/20 underline-offset-4 transition hover:decoration-[#171717]"
-              onClick={() => switchMode(isRegister ? 'login' : 'register')}
+              className="inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-[#d4d4d4] bg-white/90 text-sm font-semibold tracking-[-0.01em] text-[#2a2a2a] shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-[#111827]/30 hover:bg-white hover:shadow-[0_16px_38px_rgba(17,24,39,0.10)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
+              onClick={handleGoogleSignIn}
+              disabled={googleLoading}
+              aria-busy={googleLoading}
             >
-              {isRegister ? 'Log In' : 'Sign Up'}
+              {googleLoading ? (
+                <span className="h-4 w-4 rounded-full border-2 border-[#111827]/20 border-t-[#111827] auth-spin" aria-hidden="true" />
+              ) : (
+                <svg className="h-4 w-4" viewBox="0 0 18 18" aria-hidden="true">
+                  <path
+                    fill="#4285F4"
+                    d="M17.64 9.2c0-.64-.06-1.25-.16-1.84H9v3.48h4.84a4.14 4.14 0 0 1-1.8 2.72v2.26h2.92c1.7-1.57 2.68-3.88 2.68-6.62z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M9 18c2.43 0 4.47-.8 5.96-2.18l-2.92-2.26c-.8.54-1.84.86-3.04.86-2.35 0-4.34-1.59-5.05-3.72H.93v2.33A9 9 0 0 0 9 18z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M3.95 10.7A5.4 5.4 0 0 1 3.67 9c0-.59.1-1.16.28-1.7V4.97H.93A9 9 0 0 0 0 9c0 1.45.34 2.82.93 4.03l3.02-2.33z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.9 11.43 0 9 0A9 9 0 0 0 .93 4.97L3.95 7.3C4.66 5.17 6.65 3.58 9 3.58z"
+                  />
+                </svg>
+              )}
+              {googleLoading ? 'Connecting...' : 'Google'}
             </button>
-          </p>
+
+            <p className="mt-6 text-center text-sm font-bold text-[#777777]">
+              {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
+              <button
+                type="button"
+                className="font-semibold tracking-[-0.01em] text-[#171717] underline decoration-[#171717]/20 underline-offset-4 transition hover:decoration-[#171717]"
+                onClick={() => switchMode(isRegister ? 'login' : 'register')}
+              >
+                {isRegister ? 'Log In' : 'Sign Up'}
+              </button>
+            </p>
+          </div>
         </section>
       </main>
     </div>

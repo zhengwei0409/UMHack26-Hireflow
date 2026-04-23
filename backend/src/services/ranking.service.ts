@@ -194,12 +194,14 @@ export async function rerankJobSessions(jobId: string) {
   }
 
   const shortlistSize = Math.max(1, job.shortlistSize);
+  const isShortlistFinal =
+    job.status === 'CLOSED' || (job.closingDate instanceof Date && job.closingDate.getTime() <= Date.now());
 
   await prisma.$transaction(async (tx) => {
     for (let index = 0; index < sessions.length; index += 1) {
       const session = sessions[index];
       const rankPosition = index + 1;
-      const isShortlisted = rankPosition <= shortlistSize;
+      const isShortlisted = isShortlistFinal && rankPosition <= shortlistSize;
 
       await tx.interviewSession.update({
         where: { id: session.id },

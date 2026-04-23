@@ -22,6 +22,7 @@ model Job {
   description         String
   requirements        Json               @default("[]")
   location            String
+  closingDate         DateTime
   autoScreenThreshold Int                @default(60)
   shortlistSize       Int                @default(10)
   status              JobStatus          @default(OPEN)

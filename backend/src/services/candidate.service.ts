@@ -1,6 +1,7 @@
 import { prisma } from '../config/prisma';
 import path from 'path';
 import fs from 'fs';
+import { syncExpiredJobs } from './job.service';
 
 export async function applyToJob(data: {
   jobId: string;
@@ -11,7 +12,15 @@ export async function applyToJob(data: {
 }) {
   const job = await prisma.job.findUnique({ where: { id: data.jobId } });
   if (!job) throw new Error('JOB_NOT_FOUND');
-  if (job.status === 'CLOSED') throw new Error('JOB_CLOSED');
+  if (job.status === 'CLOSED' || job.closingDate.getTime() < Date.now()) {
+    if (job.status === 'OPEN' && job.closingDate.getTime() < Date.now()) {
+      await prisma.job.update({
+        where: { id: job.id },
+        data: { status: 'CLOSED' },
+      });
+    }
+    throw new Error('JOB_CLOSED');
+  }
 
   const candidate = await prisma.candidate.create({
     data: {
@@ -39,11 +48,9 @@ export async function applyToJob(data: {
 }
 
 export async function listCandidates(filters: { jobId?: string; status?: string; page: number; limit: number }) {
-  const where: any = {
-    job: {
-      status: 'OPEN',
-    },
-  };
+  await syncExpiredJobs();
+
+  const where: any = {};
   if (filters.jobId) where.jobId = filters.jobId;
   if (filters.status) where.status = filters.status;
 
@@ -66,7 +73,7 @@ export async function listCandidates(filters: { jobId?: string; status?: string;
         aiInterviewRank: true,
         isShortlisted: true,
         createdAt: true,
-        job: { select: { title: true, status: true } },
+        job: { select: { title: true, status: true, closingDate: true } },
       },
     }),
     prisma.candidate.count({ where }),
@@ -77,6 +84,8 @@ export async function listCandidates(filters: { jobId?: string; status?: string;
     fullName: c.fullName,
     email: c.email,
     jobTitle: c.job.title,
+    jobStatus: c.job.status,
+    jobClosingDate: c.job.closingDate,
     status: c.status,
     glmScore: c.glmScore,
     autoScreenDecision: c.autoScreenDecision,

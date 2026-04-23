@@ -1,6 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import {
+  buttonDangerClassName,
+  buttonPrimaryClassName,
+  buttonSecondaryClassName,
+} from '../styles/buttonStyles';
 
 const STATUS_ACTIONS = {
   CV_UNDER_REVIEW: [
@@ -57,18 +62,18 @@ const getRecommendationTone = (value) => {
 
 const getActionButtonClass = (variant) => {
   if (variant === 'danger') {
-    return 'border border-red-200 bg-red-50 text-red-700 hover:bg-red-100';
+    return buttonDangerClassName;
   }
 
   if (variant === 'success') {
-    return 'bg-black text-white hover:bg-zinc-800';
+    return buttonPrimaryClassName;
   }
 
   if (variant === 'warning') {
-    return 'border border-amber-200 bg-amber-50 text-amber-800 hover:bg-amber-100';
+    return 'inline-flex min-h-11 w-full items-center justify-center rounded-md border border-amber-200 bg-amber-50 px-4 text-sm font-semibold tracking-[-0.01em] text-amber-800 transition hover:bg-amber-100 focus:outline-none focus:ring-2 focus:ring-amber-200 focus:ring-offset-2 disabled:cursor-wait disabled:opacity-70';
   }
 
-  return 'border border-zinc-200 bg-white text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 hover:text-black';
+  return buttonSecondaryClassName;
 };
 
 const DetailCard = ({ title, description, children }) => (
@@ -250,7 +255,7 @@ const CandidateDetail = () => {
 
   if (loading) {
     return (
-      <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-md border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
           Loading candidate profile...
         </div>
@@ -260,7 +265,7 @@ const CandidateDetail = () => {
 
   if (error && !candidate) {
     return (
-      <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </div>
@@ -270,7 +275,7 @@ const CandidateDetail = () => {
 
   if (!candidate) {
     return (
-      <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-700">
           Candidate not found
         </div>
@@ -279,7 +284,7 @@ const CandidateDetail = () => {
   }
 
   return (
-    <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
+    <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <section className="overflow-hidden rounded-md border border-zinc-200 bg-white">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8 lg:py-8">
@@ -317,7 +322,7 @@ const CandidateDetail = () => {
                 href={`${import.meta.env.VITE_API_BASE || 'http://localhost:3000/api/v1'}/candidates/${id}/cv`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+                className={buttonSecondaryClassName}
               >
                 Download CV
               </a>
@@ -521,7 +526,7 @@ const CandidateDetail = () => {
                     <button
                       key={action.key}
                       type="button"
-                      className={`inline-flex min-h-11 w-full items-center justify-center rounded-md px-4 text-sm font-extrabold transition disabled:cursor-wait disabled:opacity-70 ${getActionButtonClass(action.variant)}`}
+                      className={getActionButtonClass(action.variant)}
                       onClick={() => handleAction(action.key)}
                       disabled={actionLoading === action.key}
                     >
@@ -548,7 +553,7 @@ const CandidateDetail = () => {
                 href={`${import.meta.env.VITE_API_BASE || 'http://localhost:3000/api/v1'}/candidates/${id}/cv`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+                className={`${buttonSecondaryClassName} w-full`}
               >
                 Download CV
               </a>
@@ -564,7 +569,7 @@ const CandidateDetail = () => {
 
               <button
                 type="button"
-                className="inline-flex min-h-11 w-full items-center justify-center rounded-md border border-red-200 bg-red-50 px-4 text-sm font-extrabold text-red-700 transition hover:bg-red-100"
+                className={`${buttonDangerClassName} w-full`}
                 onClick={handleDelete}
               >
                 Delete candidate
@@ -644,14 +649,14 @@ const CandidateDetail = () => {
                 <div className="flex flex-wrap gap-3 pt-1">
                   <button
                     type="button"
-                    className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+                    className={buttonSecondaryClassName}
                     onClick={() => setShowScheduleModal(false)}
                   >
                     Cancel
                   </button>
                   <button
                     type="submit"
-                    className="inline-flex min-h-11 items-center justify-center rounded-md bg-black px-4 text-sm font-extrabold text-white transition hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-70"
+                    className={buttonPrimaryClassName}
                     disabled={actionLoading === 'schedule'}
                   >
                     {actionLoading === 'schedule' ? 'Sending...' : 'Schedule & send email'}

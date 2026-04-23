@@ -1,22 +1,26 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import {
+  buttonBaseClassName,
+  buttonCompactClassName,
+  buttonPrimaryClassName,
+  buttonSecondaryClassName,
+} from '../styles/buttonStyles';
 
 const inputClassName =
   'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
 
 const textareaClassName = `${inputClassName} min-h-[120px] py-3`;
-const buttonBaseClassName =
-  'inline-flex cursor-pointer items-center justify-center rounded-lg font-semibold tracking-[-0.01em] transition focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-70';
-const primaryButtonClassName = `${buttonBaseClassName} primary-cta min-h-11 px-4 text-sm focus:ring-zinc-950`;
-const secondaryButtonClassName = `${buttonBaseClassName} min-h-11 border border-zinc-200 bg-white px-4 text-sm text-zinc-700 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 focus:ring-zinc-300`;
-const compactSecondaryButtonClassName = `${buttonBaseClassName} min-h-9 border border-zinc-200 px-3 text-xs focus:ring-zinc-300`;
+const primaryButtonClassName = `${buttonPrimaryClassName} primary-cta`;
+const secondaryButtonClassName = buttonSecondaryClassName;
+const compactSecondaryButtonClassName = `${buttonCompactClassName} border border-zinc-200`;
 
 const initialChatMessages = [
   {
     role: 'assistant',
     content:
-      'Describe the role you want to create. Include title, department, location, responsibilities, and requirements if you have them.',
+      'Describe the role you want to create. Include title, department, location, closing date, responsibilities, and requirements if you have them.',
   },
 ];
 
@@ -36,6 +40,16 @@ const formatDate = (date) => {
     day: 'numeric',
     year: 'numeric',
   });
+};
+
+const isDeadlineClosed = (job) => {
+  if (!job?.closingDate) return false;
+  return new Date(job.closingDate).getTime() <= Date.now();
+};
+
+const formatClosingLabel = (job) => {
+  if (!job?.closingDate) return 'No closing date';
+  return `${isDeadlineClosed(job) ? 'Deadline passed' : 'Deadline'} ${formatDate(job.closingDate)}`;
 };
 
 const getRequirements = (requirements) => {
@@ -63,7 +77,7 @@ const JobRow = ({ job, index, onClose }) => {
 
         <h3 className="mt-3 truncate text-lg font-black tracking-[-0.03em] text-zinc-950">{job.title}</h3>
         <p className="mt-1 text-sm font-semibold text-zinc-500">
-          {job.location || 'Location TBD'} / Posted {formatDate(job.createdAt)}
+          {job.location || 'Location TBD'} / Posted {formatDate(job.createdAt)} / {formatClosingLabel(job)}
         </p>
         <p className="mt-3 line-clamp-2 max-w-3xl text-sm font-semibold leading-6 text-zinc-600">
           {job.description || 'No job description added yet.'}
@@ -126,7 +140,9 @@ const ClosedJobRow = ({ job, index }) => (
   >
     <div className="min-w-0">
       <h3 className="truncate text-sm font-black text-zinc-800">{job.title}</h3>
-      <p className="mt-1 text-xs font-bold text-zinc-500">{job.department || 'General'} / {job.location || 'Location TBD'}</p>
+      <p className="mt-1 text-xs font-bold text-zinc-500">
+        {job.department || 'General'} / {job.location || 'Location TBD'} / {formatClosingLabel(job)}
+      </p>
     </div>
     <p className="text-xs font-bold text-zinc-500">Closed role</p>
     <p className="text-xs font-bold text-zinc-500">Posted {formatDate(job.createdAt)}</p>
@@ -280,15 +296,12 @@ const Jobs = () => {
   }, [jobs]);
 
   return (
-    <div className="min-h-full bg-[#f5f5f5] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
+    <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
         <section className="job-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div>
               <h1 className="text-3xl font-black tracking-[-0.05em] text-zinc-950 sm:text-4xl">Jobs</h1>
-              <p className="mt-3 max-w-2xl text-sm font-semibold leading-6 text-zinc-600">
-                View open and closed roles. Use filters to find a job and open its details.
-              </p>
               <div className="mt-5 grid gap-5 sm:grid-cols-3">
                 {metrics.map((metric, index) => (
                   <div
@@ -334,9 +347,14 @@ const Jobs = () => {
         </section>
 
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <p className="text-sm font-bold text-zinc-500">
-            Showing <span className="text-zinc-950">{filteredJobs.length}</span> of {jobs.length} roles
-          </p>
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-zinc-500">
+            <p>
+              Open jobs <span className="text-zinc-950">{openJobs.length}</span>
+            </p>
+            <p>
+              Closed roles <span className="text-zinc-950">{closedJobs.length}</span>
+            </p>
+          </div>
           <button
             type="button"
             className={primaryButtonClassName}
@@ -349,8 +367,7 @@ const Jobs = () => {
         {showForm && (
           <section className="job-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-6 flex flex-col gap-2">
-              <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">GLM intake</p>
-              <h2 className="text-2xl font-black tracking-[-0.04em] text-zinc-950">Create job with chat</h2>
+              <h2 className="text-2xl font-black tracking-[-0.04em] text-zinc-950">Create job</h2>
               <p className="text-sm font-semibold leading-6 text-zinc-600">
                 GLM will ask for missing details. When enough information is available, the job is created automatically.
               </p>
@@ -430,16 +447,6 @@ const Jobs = () => {
                   </button>
                 </div>
               </form>
-
-              <div className="flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-4">
-                <button
-                  type="button"
-                  className={secondaryButtonClassName}
-                  onClick={() => setShowForm(false)}
-                >
-                  Close panel
-                </button>
-              </div>
             </div>
           </section>
         )}
@@ -481,8 +488,7 @@ const Jobs = () => {
               <section className="job-page-enter rounded-xl border border-zinc-200 bg-white shadow-sm">
                 <div className="flex flex-col gap-2 border-b border-zinc-200 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">Active roles</p>
-                    <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-zinc-950">Open jobs</h2>
+                    <h2 className="text-2xl font-black tracking-[-0.04em] text-zinc-950">Open jobs</h2>
                   </div>
                   <p className="text-sm font-black text-zinc-500">{openJobs.length} roles</p>
                 </div>
@@ -499,8 +505,7 @@ const Jobs = () => {
               <section className="job-page-enter overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
                 <div className="flex flex-col gap-2 border-b border-zinc-100 bg-zinc-50 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
                   <div>
-                    <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-400">Archive</p>
-                    <h2 className="mt-1 text-lg font-black tracking-tight text-zinc-800">Closed roles</h2>
+                    <h2 className="text-lg font-black tracking-tight text-zinc-800">Closed roles</h2>
                   </div>
                   <p className="text-sm font-black text-zinc-500">{closedJobs.length} roles</p>
                 </div>
