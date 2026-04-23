@@ -1,12 +1,28 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
+import { buttonPrimaryClassName } from '../styles/buttonStyles';
 
 const inputClassName =
   'min-h-[46px] w-full rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-black focus:ring-2 focus:ring-black/10';
 
 const fileInputClassName =
   'block w-full rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm font-semibold text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-black file:px-3.5 file:py-2 file:text-sm file:font-extrabold file:text-white hover:border-zinc-400';
+
+const formatDate = (date) => {
+  if (!date) return 'No date';
+
+  return new Date(date).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const isJobClosed = (job) => {
+  if (!job) return false;
+  return String(job.status || '').toUpperCase() === 'CLOSED' || new Date(job.closingDate).getTime() <= Date.now();
+};
 
 const Apply = () => {
   const { jobId } = useParams();
@@ -71,6 +87,7 @@ const Apply = () => {
     return [
       { label: 'Department', value: job.department || 'General' },
       { label: 'Location', value: job.location || 'Flexible' },
+      { label: 'Closing date', value: formatDate(job.closingDate) },
       { label: 'Requirements', value: job.requirements?.length || 0 },
     ];
   }, [job]);
@@ -116,6 +133,8 @@ const Apply = () => {
     );
   }
 
+  const closedForApplications = isJobClosed(job);
+
   return (
     <div className="min-h-screen bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto grid max-w-6xl gap-6 lg:grid-cols-[minmax(0,1.1fr)_minmax(360px,0.9fr)]">
@@ -126,11 +145,13 @@ const Apply = () => {
               {job?.title || 'Open role'}
             </h1>
             <p className="mt-3 text-sm font-medium leading-6 text-zinc-600 sm:text-base">
-              Submit your profile in one sitting. A clear CV and accurate contact details are enough to get started.
+              {closedForApplications
+                ? 'This role is no longer accepting new applications.'
+                : 'Submit your profile in one sitting. A clear CV and accurate contact details are enough to get started.'}
             </p>
           </div>
 
-          <div className="grid gap-px border-y border-zinc-200 bg-zinc-200 sm:grid-cols-3">
+          <div className="grid gap-px border-y border-zinc-200 bg-zinc-200 sm:grid-cols-4">
             {jobMeta.map((item) => (
               <div key={item.label} className="bg-zinc-50 px-6 py-4">
                 <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">{item.label}</p>
@@ -178,6 +199,7 @@ const Apply = () => {
                 value={formData.fullName}
                 onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                 required
+                disabled={closedForApplications}
                 placeholder="John Doe"
               />
             </label>
@@ -190,6 +212,7 @@ const Apply = () => {
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 required
+                disabled={closedForApplications}
                 placeholder="john@example.com"
               />
             </label>
@@ -201,6 +224,7 @@ const Apply = () => {
                 className={inputClassName}
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                disabled={closedForApplications}
                 placeholder="+60 123 456 789"
               />
             </label>
@@ -212,6 +236,7 @@ const Apply = () => {
                 accept=".pdf,.docx"
                 className={fileInputClassName}
                 onChange={(e) => setCvFile(e.target.files[0])}
+                disabled={closedForApplications}
                 required
               />
               <span className="text-[11px] font-bold normal-case tracking-normal text-zinc-500">
@@ -225,10 +250,16 @@ const Apply = () => {
               </div>
             )}
 
+            {closedForApplications && (
+              <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-3 text-sm font-semibold text-zinc-700">
+                Applications closed on {formatDate(job?.closingDate)}.
+              </div>
+            )}
+
             <button
               type="submit"
-              className="inline-flex min-h-12 items-center justify-center rounded-md bg-black px-4 text-sm font-extrabold text-white transition hover:bg-zinc-800 disabled:cursor-wait disabled:opacity-70"
-              disabled={submitting}
+              className={buttonPrimaryClassName}
+              disabled={submitting || closedForApplications}
             >
               {submitting ? 'Submitting...' : 'Submit application'}
             </button>

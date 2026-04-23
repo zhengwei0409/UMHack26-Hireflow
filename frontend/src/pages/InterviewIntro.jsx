@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import {
+  buttonPrimaryClassName,
+  buttonSecondaryClassName,
+} from '../styles/buttonStyles';
 
 const InterviewIntro = () => {
   const { token } = useParams();
@@ -152,7 +156,7 @@ const InterviewIntro = () => {
             <div className="interview-reveal mt-7 flex justify-end">
               <button
                 type="button"
-                className="primary-cta interview-premium-cta inline-flex min-h-12 items-center justify-center rounded-md px-6 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-70"
+                className={`primary-cta interview-premium-cta ${buttonPrimaryClassName} min-h-12 px-6`}
                 onClick={handleOpenConsent}
                 disabled={starting}
               >
@@ -205,7 +209,7 @@ const InterviewIntro = () => {
             <div className="mt-6 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
               <button
                 type="button"
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50"
+                className={buttonSecondaryClassName}
                 onClick={() => {
                   setShowConsentModal(false);
                   setError('');
@@ -216,7 +220,7 @@ const InterviewIntro = () => {
               </button>
               <button
                 type="button"
-                className="primary-cta interview-premium-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition disabled:cursor-not-allowed disabled:opacity-70"
+                className={`primary-cta interview-premium-cta ${buttonPrimaryClassName}`}
                 onClick={handleStart}
                 disabled={starting || !consent}
               >

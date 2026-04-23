@@ -41,6 +41,7 @@ export interface JobDraftData {
   description: string;
   requirements: string[];
   location: string;
+  closingDate: string;
   autoScreenThreshold: number;
   shortlistSize: number;
 }
@@ -99,11 +100,16 @@ function normalizeJobDraft(raw: any): JobDraftData | null {
     description: typeof raw.description === 'string' ? raw.description.trim() : '',
     requirements,
     location: typeof raw.location === 'string' ? raw.location.trim() : '',
+    closingDate: typeof raw.closingDate === 'string' ? raw.closingDate.trim() : '',
     autoScreenThreshold: clampScore(Number(raw.autoScreenThreshold ?? 60)),
     shortlistSize: Math.min(50, Math.max(1, Math.round(Number(raw.shortlistSize ?? 10)))),
   };
 
-  if (!draft.title || !draft.department || !draft.description || !draft.location || draft.requirements.length === 0) {
+  if (!draft.title || !draft.department || !draft.description || !draft.location || !draft.closingDate || draft.requirements.length === 0) {
+    return null;
+  }
+
+  if (Number.isNaN(new Date(draft.closingDate).getTime())) {
     return null;
   }
 
@@ -273,6 +279,7 @@ Required fields:
 - description
 - requirements as an array of strings
 - location
+- closingDate in YYYY-MM-DD format
 
 Optional fields:
 - autoScreenThreshold number from 0 to 100, default 60
@@ -307,6 +314,7 @@ or
     "description": "string",
     "requirements": ["string"],
     "location": "string",
+    "closingDate": "2026-05-15",
     "autoScreenThreshold": 60,
     "shortlistSize": 10
   }
