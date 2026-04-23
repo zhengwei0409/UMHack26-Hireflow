@@ -192,12 +192,6 @@ const JobDetail = () => {
               >
                 {copied ? 'Application link copied' : 'Copy application link'}
               </button>
-              <Link
-                to={`/jobs/${id}/shortlist`}
-                className="primary-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition"
-              >
-                Open ranked shortlist
-              </Link>
             </div>
           </div>
 
@@ -294,12 +288,6 @@ const JobDetail = () => {
                 The strongest scored candidates appear here first so the hiring team can quickly review evidence.
               </p>
             </div>
-            <Link
-              to={`/jobs/${id}/shortlist`}
-              className="inline-flex min-h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
-            >
-              View full shortlist
-            </Link>
           </div>
 
           {shortlist.length === 0 ? (

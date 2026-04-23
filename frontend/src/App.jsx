@@ -14,7 +14,6 @@ import InterviewResponse from './pages/InterviewResponse';
 import InterviewIntro from './pages/InterviewIntro';
 import InterviewRoom from './pages/InterviewRoom';
 import InterviewComplete from './pages/InterviewComplete';
-import RankedShortlist from './pages/RankedShortlist';
 
 const AuthContext = createContext(null);
 
@@ -105,8 +104,6 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="jobs" element={<Jobs />} />
             <Route path="jobs/:id" element={<JobDetail />} />
-            <Route path="jobs/:id/shortlist" element={<RankedShortlist />} />
-            <Route path="shortlist" element={<RankedShortlist />} />
             <Route path="candidates" element={<Candidates />} />
             <Route path="candidates/:id" element={<CandidateDetail />} />
           </Route>
