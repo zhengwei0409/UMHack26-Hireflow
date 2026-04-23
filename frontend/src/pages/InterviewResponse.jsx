@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
+import {
+  buttonPrimaryClassName,
+  buttonSecondaryClassName,
+} from '../styles/buttonStyles';
 
 const fieldClassName =
   'w-full rounded-md border border-zinc-200 bg-white px-3.5 py-3 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-black focus:ring-2 focus:ring-black/10';
@@ -127,14 +131,14 @@ const InterviewResponse = ({ type }) => {
         <div className="mt-6 flex flex-wrap gap-3">
           <button
             type="button"
-            className="primary-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition"
+            className={`primary-cta ${buttonPrimaryClassName}`}
             onClick={() => setShowReason(true)}
           >
             Yes, I need to reschedule
           </button>
           <button
             type="button"
-            className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+            className={buttonSecondaryClassName}
             onClick={() => navigate('/')}
           >
             Cancel
@@ -174,14 +178,14 @@ const InterviewResponse = ({ type }) => {
           <div className="flex flex-wrap gap-3">
             <button
               type="button"
-              className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+              className={buttonSecondaryClassName}
               onClick={() => navigate('/')}
             >
               Cancel
             </button>
             <button
               type="submit"
-              className="primary-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition disabled:cursor-wait disabled:opacity-70"
+              className={`primary-cta ${buttonPrimaryClassName}`}
               disabled={loading}
             >
               Submit request

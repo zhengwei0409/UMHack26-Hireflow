@@ -1,9 +1,33 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import api from '../services/api';
+import {
+  buttonPrimaryClassName,
+  buttonSecondaryClassName,
+} from '../styles/buttonStyles';
 
 const inputClassName =
   'min-h-[44px] w-full rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-black focus:ring-2 focus:ring-black/10';
+
+const formatDate = (date) => {
+  if (!date) return 'No date';
+
+  return new Date(date).toLocaleDateString(undefined, {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  });
+};
+
+const toInputDate = (date) => {
+  if (!date) return '';
+  return new Date(date).toISOString().slice(0, 10);
+};
+
+const isShortlistFinal = (job) => {
+  if (!job?.closingDate) return false;
+  return String(job.status || '').toUpperCase() === 'CLOSED' || new Date(job.closingDate).getTime() <= Date.now();
+};
 
 const formatStatusLabel = (status) =>
   String(status || 'OPEN')
@@ -38,7 +62,7 @@ const JobDetail = () => {
   const [job, setJob] = useState(null);
   const [candidates, setCandidates] = useState([]);
   const [shortlist, setShortlist] = useState([]);
-  const [config, setConfig] = useState({ autoScreenThreshold: 60, shortlistSize: 10 });
+  const [config, setConfig] = useState({ autoScreenThreshold: 60, shortlistSize: 10, closingDate: '' });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
@@ -63,6 +87,7 @@ const JobDetail = () => {
           fullName: session.candidate.fullName,
           aiInterviewScore: session.candidate.aiInterviewScore ?? session.overallScore,
           aiInterviewRank: session.candidate.aiInterviewRank ?? session.rankPosition,
+          isShortlisted: Boolean(session.candidate.isShortlisted ?? session.isShortlisted),
           status: session.candidate.status,
           proctorFlagCount: session.proctorEvents?.length || 0,
         })),
@@ -70,6 +95,7 @@ const JobDetail = () => {
       setConfig({
         autoScreenThreshold: jobRes.data.autoScreenThreshold ?? 60,
         shortlistSize: jobRes.data.shortlistSize ?? 10,
+        closingDate: toInputDate(jobRes.data.closingDate),
       });
     } catch (err) {
       setError(err.message);
@@ -105,26 +131,28 @@ const JobDetail = () => {
     }
   };
 
+  const shortlistFinal = useMemo(() => isShortlistFinal(job), [job]);
+
   const metrics = useMemo(() => {
-    const shortlistedCount = shortlist.length;
-    const averageScore = shortlistedCount
+    const finalShortlistCount = shortlist.filter((candidate) => candidate.isShortlisted).length;
+    const averageScore = shortlist.length
       ? Math.round(
           shortlist.reduce((sum, candidate) => sum + Number(candidate.aiInterviewScore || 0), 0) /
-            shortlistedCount,
+            shortlist.length,
         )
       : 0;
 
     return [
       { label: 'Applicants', value: candidates.length },
-      { label: 'Shortlisted sessions', value: shortlistedCount },
+      { label: shortlistFinal ? 'Final shortlist' : 'Scored candidates', value: shortlistFinal ? finalShortlistCount : shortlist.length },
       { label: 'AI threshold', value: `${config.autoScreenThreshold}%` },
-      { label: 'Avg. shortlist score', value: `${averageScore}%` },
+      { label: shortlistFinal ? 'Avg. final score' : 'Avg. ranked score', value: `${averageScore}%` },
     ];
-  }, [candidates.length, shortlist, config.autoScreenThreshold]);
+  }, [candidates.length, shortlist, config.autoScreenThreshold, shortlistFinal]);
 
   if (loading) {
     return (
-      <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-md border border-zinc-200 bg-white px-6 py-12 text-center text-sm font-semibold text-zinc-500">
           Loading role details...
         </div>
@@ -134,7 +162,7 @@ const JobDetail = () => {
 
   if (error && !job) {
     return (
-      <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
           {error}
         </div>
@@ -144,7 +172,7 @@ const JobDetail = () => {
 
   if (!job) {
     return (
-      <div className="min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
+      <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-6 sm:px-6 lg:px-8">
         <div className="rounded-md border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-700">
           Job not found
         </div>
@@ -153,7 +181,7 @@ const JobDetail = () => {
   }
 
   return (
-    <div className="min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
+    <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-4 text-black sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-6">
         <section className="overflow-hidden rounded-md border border-zinc-200 bg-white">
           <div className="grid gap-6 px-6 py-6 lg:grid-cols-[minmax(0,1fr)_auto] lg:px-8 lg:py-8">
@@ -173,21 +201,20 @@ const JobDetail = () => {
                   {formatStatusLabel(job.status)}
                 </span>
                 <span className="text-sm font-semibold text-zinc-500">
-                  {job.department} · {job.location}
+                  {job.department} · {job.location} · Closes {formatDate(job.closingDate)}
                 </span>
               </div>
 
               <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-4xl">{job.title}</h1>
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-zinc-600 sm:text-base">
-                Review the role setup, manage prescreen thresholds, and monitor which applicants are reaching the
-                shortlist stage.
+                Review the role setup, manage the closing date, and monitor how candidates rank before the shortlist is finalized.
               </p>
             </div>
 
             <div className="flex flex-col items-start gap-3 lg:items-end">
               <button
                 type="button"
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+                className={buttonSecondaryClassName}
                 onClick={copyPublicUrl}
               >
                 {copied ? 'Application link copied' : 'Copy application link'}
@@ -235,14 +262,23 @@ const JobDetail = () => {
 
           <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="mb-5">
-              <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">AI prescreen config</h2>
+              <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Hiring rules</h2>
               <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
-                These rules decide how strict the automatic CV screening should be before candidates move deeper into
-                the funnel.
+                Set the application closing date and decide how strict the screening and final shortlist should be.
               </p>
             </div>
 
             <form onSubmit={savePrescreenConfig} className="grid gap-5">
+              <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
+                <span>Closing date</span>
+                <input
+                  type="date"
+                  className={inputClassName}
+                  value={config.closingDate}
+                  onChange={(e) => setConfig((current) => ({ ...current, closingDate: e.target.value }))}
+                />
+              </label>
+
               <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
                 <span>CV threshold</span>
                 <input
@@ -271,10 +307,10 @@ const JobDetail = () => {
 
               <button
                 type="submit"
-                className="primary-cta inline-flex min-h-11 items-center justify-center rounded-md px-4 text-sm font-extrabold transition disabled:cursor-wait disabled:opacity-70"
+                className={`primary-cta ${buttonPrimaryClassName}`}
                 disabled={savingConfig}
               >
-                {savingConfig ? 'Saving...' : 'Save prescreen rules'}
+                {savingConfig ? 'Saving...' : 'Save hiring rules'}
               </button>
             </form>
           </section>
@@ -283,9 +319,13 @@ const JobDetail = () => {
         <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Top shortlist signals</h2>
+              <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">
+                {shortlistFinal ? 'Final shortlist' : 'Current ranking'}
+              </h2>
               <p className="mt-2 text-sm font-medium text-zinc-600">
-                The strongest scored candidates appear here first so the hiring team can quickly review evidence.
+                {shortlistFinal
+                  ? 'The shortlist is now frozen because the closing date has passed or the role was closed.'
+                  : 'Candidates are ranked live for now. The final shortlist will freeze after the closing date.'}
               </p>
             </div>
           </div>
@@ -326,7 +366,7 @@ const JobDetail = () => {
                       <td className="px-4 py-4 text-right">
                         <Link
                           to={`/candidates/${candidate.id}`}
-                          className="inline-flex min-h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+                          className={`${buttonSecondaryClassName} min-h-10 px-3`}
                         >
                           Review
                         </Link>
@@ -386,7 +426,7 @@ const JobDetail = () => {
                       <td className="px-4 py-4 text-right">
                         <Link
                           to={`/candidates/${candidate.id}`}
-                          className="inline-flex min-h-10 items-center justify-center rounded-md border border-zinc-200 bg-white px-3 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+                          className={`${buttonSecondaryClassName} min-h-10 px-3`}
                         >
                           View
                         </Link>

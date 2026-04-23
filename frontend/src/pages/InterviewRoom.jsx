@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
+import {
+  buttonPrimaryClassName,
+  buttonPrimaryElevatedClassName,
+} from '../styles/buttonStyles';
 
 const DEFAULT_LANGUAGE = 'python';
 const INTERVIEW_TIME_LIMIT_SECONDS = 15 * 60;
@@ -887,7 +891,7 @@ const InterviewRoom = () => {
           </div>
           <button
             type="button"
-            className="primary-cta inline-flex min-h-12 cursor-pointer items-center justify-center rounded-md px-6 text-sm font-extrabold shadow-[0_14px_34px_rgba(15,23,42,0.18)] transition hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.24)] disabled:translate-y-0 disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 disabled:shadow-none"
+            className={`primary-cta ${buttonPrimaryElevatedClassName}`}
             onClick={handleSubmit}
             disabled={submitDisabled}
           >
@@ -946,7 +950,7 @@ const InterviewRoom = () => {
             {mediaError && (
               <button
                 type="button"
-                className="primary-cta mt-6 inline-flex min-h-12 w-full items-center justify-center rounded-md px-5 text-sm font-extrabold transition disabled:cursor-wait disabled:opacity-70"
+                className={`primary-cta mt-6 w-full ${buttonPrimaryClassName} min-h-12 px-5`}
                 onClick={requestMediaAccess}
                 disabled={mediaRequesting}
               >
@@ -971,7 +975,7 @@ const InterviewRoom = () => {
             <p className="mt-3 text-sm font-semibold text-zinc-800">Current violations: {violationCount}/2</p>
             <button
               type="button"
-              className="primary-cta mt-6 inline-flex min-h-11 w-full items-center justify-center rounded-md px-4 text-sm font-extrabold transition"
+              className={`primary-cta mt-6 w-full ${buttonPrimaryClassName}`}
               onClick={() => setWarning(null)}
             >
               I understand

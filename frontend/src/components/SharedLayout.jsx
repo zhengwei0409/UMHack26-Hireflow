@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
+import { buttonSecondaryClassName } from '../styles/buttonStyles';
 
 const navItems = [
   {
@@ -46,7 +47,7 @@ const SharedLayout = () => {
   return (
     <div className="min-h-screen bg-zinc-100 text-zinc-950">
       <div className="grid min-h-screen grid-cols-1 lg:grid-cols-[264px_minmax(0,1fr)]">
-        <aside className="hidden min-h-screen flex-col border-r border-zinc-200 bg-white lg:flex">
+        <aside className="hidden h-screen flex-col overflow-y-auto border-r border-zinc-200 bg-white lg:sticky lg:top-0 lg:flex">
           <div className="border-b border-zinc-200 px-5 py-5">
             <Link to="/dashboard" className="flex items-center gap-3">
               <span className="auth-logo-mark relative grid h-10 w-10 shrink-0 place-items-center overflow-hidden rounded-md bg-black text-white transition duration-300 hover:-translate-y-0.5 hover:shadow-[0_18px_40px_rgba(17,24,39,0.22)]">
@@ -92,7 +93,7 @@ const SharedLayout = () => {
             <button
               type="button"
               onClick={handleLogout}
-              className="mt-3 flex h-10 w-full items-center justify-center gap-2 rounded-md border border-zinc-200 bg-white px-3 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black focus:outline-none focus:ring-2 focus:ring-black focus:ring-offset-2"
+              className={`mt-3 w-full gap-2 ${buttonSecondaryClassName}`}
             >
               <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
                 <path fill="currentColor" d="M8 3h7a1 1 0 0 1 1 1v3h-2V5H8v10h6v-2h2v3a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-3H3v-2h4V9H3V7h4V4a1 1 0 0 1 1-1Zm6.6 5.4L17.2 11l-2.6 2.6-1.4-1.4.2-.2H9v-2h4.4l-.2-.2 1.4-1.4Z" />
@@ -147,7 +148,7 @@ const SharedLayout = () => {
                   key={`mobile-${item.label}-${item.to}`}
                   to={item.to}
                   className={({ isActive }) =>
-                    `inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-bold transition ${
+                    `inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-semibold tracking-[-0.01em] transition ${
                       isActive ? 'bg-black text-white' : 'border border-zinc-200 bg-white text-zinc-600 hover:text-black'
                     }`
                   }

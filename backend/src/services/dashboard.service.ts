@@ -1,6 +1,9 @@
 import { prisma } from '../config/prisma';
+import { syncExpiredJobs } from './job.service';
 
 export async function getDashboardData() {
+  await syncExpiredJobs();
+
   const [openRoles, totalApplicants, screenedResumes, nextInterviews, aiScored, shortlisted] = await Promise.all([
     prisma.job.count({ where: { status: 'OPEN' } }),
     prisma.candidate.count({ where: { job: { status: 'OPEN' } } }),

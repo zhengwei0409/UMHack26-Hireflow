@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { buttonBaseClassName } from '../styles/buttonStyles';
 
 const selectClassName =
   'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
-const buttonBaseClassName =
-  'inline-flex cursor-pointer items-center justify-center rounded-lg font-semibold tracking-[-0.01em] transition focus:outline-none focus:ring-2 focus:ring-offset-2';
+const isFinalizedJob = (candidate) =>
+  String(candidate.jobStatus || '').toUpperCase() === 'CLOSED' ||
+  (candidate.jobClosingDate ? new Date(candidate.jobClosingDate).getTime() <= Date.now() : false);
 
 const statusOptions = [
   ['APPLIED', 'Applied'],
@@ -290,9 +292,15 @@ const Candidates = () => {
   };
 
   const intelligence = useMemo(() => {
-    const shortlisted = candidates.filter((candidate) => candidate.isShortlisted).length;
+    const pendingReview = candidates.filter(
+      (candidate) =>
+        candidate.isShortlisted &&
+        isFinalizedJob(candidate) &&
+        String(candidate.status || '').toUpperCase() === 'AI_INTERVIEW_SCORED',
+    ).length;
+
     return {
-      shortlisted,
+      pendingReview,
     };
   }, [candidates]);
 
@@ -319,7 +327,7 @@ const Candidates = () => {
   }, [candidates]);
 
   return (
-    <div className="min-h-full bg-[#f5f5f5] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
+    <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
         <section className="candidate-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
@@ -328,7 +336,7 @@ const Candidates = () => {
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 {[
                   { label: 'Total', value: candidates.length },
-                  { label: 'AI passed', value: intelligence.shortlisted },
+                  { label: 'Pending review', value: intelligence.pendingReview },
                 ].map((metric, index) => (
                   <div
                     key={metric.label}
@@ -393,20 +401,12 @@ const Candidates = () => {
             <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">No matches</p>
             <h2 className="mt-3 text-2xl font-black tracking-tight text-zinc-950">No candidates found</h2>
             <p className="mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 text-zinc-600">
-              Clear a filter or wait for new applicants to enter this pipeline.
+              Clear a filter or wait for new applicants to appear in this list.
             </p>
           </section>
         ) : (
           <section>
-            <div className="candidate-page-enter rounded-xl border border-zinc-200 bg-white shadow-sm">
-              <div className="flex flex-col gap-3 border-b border-zinc-200 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">Candidate list</p>
-                  <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-zinc-950">Pipeline</h2>
-                </div>
-              </div>
-
-              <div className="grid gap-4 p-4">
+            <div className="grid gap-4">
                 {candidateLanes.map((lane, laneIndex) => (
                   <section
                     key={lane.key}
@@ -428,7 +428,6 @@ const Candidates = () => {
                     </div>
                   </section>
                 ))}
-              </div>
             </div>
           </section>
         )}
