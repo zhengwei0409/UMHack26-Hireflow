@@ -12,3 +12,5 @@ uv.lock
 .env
 transcripts/*.json
 .DS_Store
+node_modules/
+backend/uploads/
