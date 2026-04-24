@@ -6,7 +6,7 @@ const NEXT_ACTIONS: Record<string, string[]> = {
   AI_INTERVIEW_INVITED: ['Candidate can open the AI interview link to begin the prescreen'],
   AI_INTERVIEW_IN_PROGRESS: ['Wait for the candidate to submit the AI interview'],
   AI_INTERVIEW_COMPLETED: ['AI scoring will finalize the result automatically'],
-  AI_INTERVIEW_SCORED: ['Review AI evidence and advance strong candidates to human interview'],
+  AI_INTERVIEW_SCORED: ['Review AI evidence, then accept for human interview or reject'],
   INTERVIEW_PENDING: ['Schedule interview time slot'],
   INTERVIEW_SCHEDULED: ['Candidate will receive email to confirm'],
   INTERVIEW_CONFIRMED: ['Mark interview as done after completion'],
@@ -15,7 +15,7 @@ const NEXT_ACTIONS: Record<string, string[]> = {
   OFFER_GENERATING: ['Offer letter will be generated automatically'],
   INTERVIEW_REJECTED: [],
   CV_PARSING: ['GLM analysis will start automatically'],
-  INTERVIEW_DONE: ['HR can now accept or reject the interview'],
+  INTERVIEW_DONE: ['HR can now accept or reject the candidate'],
   CV_UNDER_REVIEW: ['Review GLM analysis and make decision'],
 };
 
@@ -45,6 +45,8 @@ async function handleAction(req: Request<{ id: string }>, res: Response, action:
       });
     } else if (action === 'mark-interview-done') {
       // No automation needed after marking interview done - just wait for HR decision
+    } else if (action === 'advance-to-human-interview') {
+      // HR accepted the candidate for a human interview. Scheduling is the next step.
     }
 
     return res.status(200).json({
@@ -86,9 +88,6 @@ export const rejectInterview = (req: Request<{ id: string }>, res: Response) =>
 
 export const advanceToHumanInterview = (req: Request<{ id: string }>, res: Response) =>
   handleAction(req, res, 'advance-to-human-interview');
-
-export const rejectAfterAi = (req: Request<{ id: string }>, res: Response) =>
-  handleAction(req, res, 'reject-after-ai');
 
 export const overrideAutoScreenPass = (req: Request<{ id: string }>, res: Response) =>
   handleAction(req, res, 'override-auto-screen-pass');

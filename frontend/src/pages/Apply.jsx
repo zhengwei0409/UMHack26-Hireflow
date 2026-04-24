@@ -120,7 +120,7 @@ const Apply = () => {
             ✓
           </div>
           <p className="mt-6 text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Application received</p>
-          <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950">Application submitted</h1>
+          <h1 className="app-page-title mt-3 text-3xl text-zinc-950">Application submitted</h1>
           <p className="mt-4 text-sm font-medium leading-7 text-zinc-600 sm:text-base">
             Thank you for applying for the {job?.title} position. We have received your CV and the hiring team will
             review it shortly.
@@ -141,7 +141,7 @@ const Apply = () => {
         <section className="overflow-hidden rounded-md border border-zinc-200 bg-white shadow-sm">
           <div className="px-6 py-6 sm:px-8 sm:py-8">
             <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Apply now</p>
-            <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-4xl">
+            <h1 className="app-page-title mt-3 text-3xl text-zinc-950 sm:text-4xl">
               {job?.title || 'Open role'}
             </h1>
             <p className="mt-3 text-sm font-medium leading-6 text-zinc-600 sm:text-base">
@@ -161,7 +161,7 @@ const Apply = () => {
           </div>
 
           <div className="px-6 py-6 sm:px-8 sm:py-8">
-            <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Role details</h2>
+            <h2 className="app-section-title-sm text-xl text-zinc-950">Role details</h2>
             <p className="mt-4 whitespace-pre-wrap text-sm font-medium leading-7 text-zinc-600">{job?.description}</p>
 
             {job?.requirements?.length > 0 && (
@@ -184,7 +184,7 @@ const Apply = () => {
 
         <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm sm:p-8">
           <div className="mb-6">
-            <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Your application</h2>
+            <h2 className="app-section-title text-2xl text-zinc-950">Your application</h2>
             <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
               Keep it simple. We only need your basic contact details and your latest CV.
             </p>

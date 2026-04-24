@@ -205,7 +205,7 @@ const JobDetail = () => {
                 </span>
               </div>
 
-              <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-4xl">{job.title}</h1>
+              <h1 className="app-page-title mt-4 text-3xl text-zinc-950 sm:text-4xl">{job.title}</h1>
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-zinc-600 sm:text-base">
                 Review the role setup, manage the closing date, and monitor how candidates rank before the shortlist is finalized.
               </p>
@@ -240,7 +240,7 @@ const JobDetail = () => {
 
         <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)]">
           <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
-            <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Role overview</h2>
+            <h2 className="app-section-title text-2xl text-zinc-950">Role overview</h2>
             <p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-7 text-zinc-600">{job.description}</p>
 
             {job.requirements?.length > 0 && (
@@ -262,7 +262,7 @@ const JobDetail = () => {
 
           <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm">
             <div className="mb-5">
-              <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Hiring rules</h2>
+              <h2 className="app-section-title-sm text-xl text-zinc-950">Hiring rules</h2>
               <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
                 Set the application closing date and decide how strict the screening and final shortlist should be.
               </p>
@@ -319,7 +319,7 @@ const JobDetail = () => {
         <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
           <div className="mb-5 flex flex-wrap items-end justify-between gap-3">
             <div>
-              <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">
+              <h2 className="app-section-title text-2xl text-zinc-950">
                 {shortlistFinal ? 'Final shortlist' : 'Current ranking'}
               </h2>
               <p className="mt-2 text-sm font-medium text-zinc-600">
@@ -381,7 +381,7 @@ const JobDetail = () => {
 
         <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
           <div className="mb-5">
-            <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Applicants ({candidates.length})</h2>
+            <h2 className="app-section-title text-2xl text-zinc-950">Applicants ({candidates.length})</h2>
             <p className="mt-2 text-sm font-medium text-zinc-600">
               Every candidate attached to this role, including CV-only applicants and interview-stage candidates.
             </p>

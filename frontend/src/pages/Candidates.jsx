@@ -1,10 +1,12 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { buttonBaseClassName } from '../styles/buttonStyles';
 
 const selectClassName =
   'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
+const collapseToggleClassName = `${buttonBaseClassName} h-9 w-9 border border-zinc-200 bg-white p-0 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 focus:ring-zinc-300`;
+const sectionCountClassName = 'inline-flex min-h-7 items-center rounded-full bg-zinc-100 px-2.5 text-xs font-black tracking-[0.08em] text-zinc-600';
 const isFinalizedJob = (candidate) =>
   String(candidate.jobStatus || '').toUpperCase() === 'CLOSED' ||
   (candidate.jobClosingDate ? new Date(candidate.jobClosingDate).getTime() <= Date.now() : false);
@@ -32,11 +34,26 @@ const statusOptions = [
   ['FAILED', 'Failed'],
 ];
 
+const CollapseIcon = ({ collapsed }) => (
+  <svg
+    viewBox="0 0 20 20"
+    aria-hidden="true"
+    className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 8l5 5 5-5" />
+  </svg>
+);
+
 const reviewLanes = [
   {
     key: 'ai-scored',
     title: 'Waiting for HR decision',
-    description: 'AI interview completed. HR can advance or reject.',
+    description: 'AI interview completed. HR can accept for human interview or reject.',
     statuses: ['AI_INTERVIEW_SCORED'],
   },
   {
@@ -48,7 +65,7 @@ const reviewLanes = [
   {
     key: 'active-screening',
     title: 'Waiting for screening',
-    description: 'CV review or AI interview still in progress.',
+    description: 'Auto CV screening or AI interview still in progress.',
     statuses: ['APPLIED', 'CV_PARSING', 'CV_UNDER_REVIEW', 'AI_INTERVIEW_INVITED', 'AI_INTERVIEW_IN_PROGRESS', 'AI_INTERVIEW_COMPLETED'],
   },
   {
@@ -194,7 +211,7 @@ const ScoreRing = ({ score }) => {
   );
 };
 
-const CandidateRow = ({ candidate, index = 0 }) => {
+const CandidateRow = ({ candidate, index = 0, hideRank = false, hideRadar = false }) => {
   const score = getNumericScore(candidate);
   const radar = getCandidateRadar(candidate);
   const rank = candidate.aiInterviewRank ? `#${candidate.aiInterviewRank} for this job` : 'No rank yet';
@@ -202,7 +219,13 @@ const CandidateRow = ({ candidate, index = 0 }) => {
 
   return (
     <article
-      className="candidate-row grid items-center gap-5 px-5 py-5 lg:grid-cols-[minmax(320px,1fr)_170px_120px_112px]"
+      className={`candidate-row grid items-center gap-5 px-5 py-5 ${
+        hideRadar && hideRank
+          ? 'lg:grid-cols-[minmax(320px,1fr)_112px]'
+          : hideRank
+            ? 'lg:grid-cols-[minmax(320px,1fr)_170px_112px]'
+            : 'lg:grid-cols-[minmax(320px,1fr)_170px_120px_112px]'
+      }`}
       style={{ animationDelay: `${Math.min(index * 45, 240)}ms` }}
     >
       <div className="flex min-w-0 items-center gap-4">
@@ -213,11 +236,6 @@ const CandidateRow = ({ candidate, index = 0 }) => {
         <div className="min-w-0">
           <div className="flex flex-wrap items-center gap-2">
             <h3 className="truncate text-base font-black text-zinc-950">{candidate.fullName}</h3>
-            {candidate.isShortlisted && (
-              <span className="rounded-md bg-zinc-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-[0.18em] text-zinc-700">
-                AI pass
-              </span>
-            )}
           </div>
           <p className="mt-1 truncate text-sm font-semibold text-zinc-500">{candidate.email}</p>
           <div className="mt-3 flex flex-wrap gap-x-3 gap-y-1 text-sm font-bold text-zinc-800">
@@ -228,14 +246,18 @@ const CandidateRow = ({ candidate, index = 0 }) => {
         </div>
       </div>
 
-      <div className="candidate-radar-reveal h-28 w-36 justify-self-start lg:justify-self-center">
-        <RadarPolygon points={radar} />
-      </div>
+      {hideRadar ? null : (
+        <div className="candidate-radar-reveal h-28 w-36 justify-self-start lg:justify-self-center">
+          <RadarPolygon points={radar} />
+        </div>
+      )}
 
-      <div className="grid gap-2">
-        <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Rank in job</p>
-        <p className="text-xs font-semibold text-zinc-500">{rank}</p>
-      </div>
+      {hideRank ? null : (
+        <div className="grid gap-2">
+          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Rank in job</p>
+          <p className="text-xs font-semibold text-zinc-500">{rank}</p>
+        </div>
+      )}
 
       <div className="flex flex-col items-start gap-3 lg:items-end">
         <Link
@@ -251,15 +273,24 @@ const CandidateRow = ({ candidate, index = 0 }) => {
 };
 
 const Candidates = () => {
+  const [searchParams] = useSearchParams();
   const [candidates, setCandidates] = useState([]);
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState({ jobId: '', status: '' });
+  const [filters, setFilters] = useState(() => ({ jobId: '', status: searchParams.get('status') || '' }));
+  const [collapsedLanes, setCollapsedLanes] = useState({
+    'rejected-closed': true,
+  });
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    const status = searchParams.get('status') || '';
+    setFilters((current) => (current.status === status ? current : { ...current, status }));
+  }, [searchParams]);
 
   useEffect(() => {
     loadCandidates();
@@ -326,13 +357,20 @@ const Candidates = () => {
     return lanes;
   }, [candidates]);
 
+  const toggleLane = (laneKey) => {
+    setCollapsedLanes((current) => ({
+      ...current,
+      [laneKey]: !current[laneKey],
+    }));
+  };
+
   return (
     <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
         <section className="candidate-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <h1 className="text-3xl font-black tracking-[-0.05em] text-zinc-950 sm:text-4xl">Candidates</h1>
+              <h1 className="app-page-title text-3xl text-zinc-950 sm:text-4xl">Candidates</h1>
               <div className="mt-5 grid gap-5 sm:grid-cols-2">
                 {[
                   { label: 'Total', value: candidates.length },
@@ -399,7 +437,7 @@ const Candidates = () => {
         ) : candidates.length === 0 ? (
           <section className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">No matches</p>
-            <h2 className="mt-3 text-2xl font-black tracking-tight text-zinc-950">No candidates found</h2>
+            <h2 className="app-section-title mt-3 text-2xl text-zinc-950">No candidates found</h2>
             <p className="mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 text-zinc-600">
               Clear a filter or wait for new applicants to appear in this list.
             </p>
@@ -414,18 +452,36 @@ const Candidates = () => {
                     style={{ animationDelay: `${120 + laneIndex * 80}ms` }}
                   >
                     <div className="flex flex-col gap-2 border-b border-zinc-100 bg-zinc-50 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
-                      <div>
+                      <div className="flex flex-wrap items-center gap-3">
                         <h3 className="text-lg font-black tracking-tight text-zinc-950">{lane.title}</h3>
-                        <p className="mt-1 text-sm font-semibold text-zinc-500">{lane.description}</p>
+                        <span className={sectionCountClassName}>{lane.candidates.length}</span>
                       </div>
-                      <p className="text-sm font-black text-zinc-500">{lane.candidates.length}</p>
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          type="button"
+                          className={collapseToggleClassName}
+                          onClick={() => toggleLane(lane.key)}
+                          aria-expanded={!collapsedLanes[lane.key]}
+                          aria-label={collapsedLanes[lane.key] ? `Expand ${lane.title}` : `Collapse ${lane.title}`}
+                        >
+                          <CollapseIcon collapsed={collapsedLanes[lane.key]} />
+                        </button>
+                      </div>
                     </div>
 
-                    <div className="divide-y divide-zinc-100">
-                      {lane.candidates.map((candidate, index) => (
-                        <CandidateRow key={candidate.id} candidate={candidate} index={index} />
-                      ))}
-                    </div>
+                    {collapsedLanes[lane.key] ? null : (
+                      <div className="divide-y divide-zinc-100">
+                        {lane.candidates.map((candidate, index) => (
+                          <CandidateRow
+                            key={candidate.id}
+                            candidate={candidate}
+                            index={index}
+                            hideRank={lane.key === 'rejected-closed'}
+                            hideRadar={lane.key === 'rejected-closed'}
+                          />
+                        ))}
+                      </div>
+                    )}
                   </section>
                 ))}
             </div>
