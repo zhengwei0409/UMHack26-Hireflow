@@ -1,0 +1,48 @@
+# Build: docker build -t joinly:latest .
+
+FROM python:3.12-slim
+
+ENV PYTHONUNBUFFERED=1 \
+    JOINLY_SERVER_HOST="0.0.0.0" \
+    JOINLY_SERVER_PORT=8000 \
+    JOINLY_LOGGING_PLAIN=1
+
+EXPOSE 8000
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    curl \
+    libnss3 \
+    libatk1.0-0 \
+    libatk-bridge2.0-0 \
+    libcups2 \
+    libxcomposite1 \
+    libxrandr2 \
+    libgbm1 \
+    libasound2 \
+    libpangocairo-1.0-0 \
+    libxdamage1 \
+    libxfixes3 \
+    libxkbcommon0 \
+    pulseaudio \
+    pulseaudio-utils \
+    xvfb \
+    x11vnc \
+    && rm -rf /var/lib/apt/lists/* /tmp/*
+
+# Install uv
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh
+ENV PATH="/root/.local/bin:${PATH}"
+
+WORKDIR /app
+
+# Copy all source files first
+COPY . /app
+
+# Now install dependencies
+RUN /root/.local/bin/uv sync --no-dev
+
+# Download ML assets
+RUN /root/.local/bin/uv run scripts/download_assets.py --assets playwright whisper silero kokoro --whisper-model base
+
+ENTRYPOINT ["/app/.venv/bin/joinly"]
