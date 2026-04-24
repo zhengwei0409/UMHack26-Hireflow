@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import api from '../services/api';
 import {
+  buttonBaseClassName,
   buttonDangerClassName,
   buttonPrimaryClassName,
   buttonSecondaryClassName,
@@ -34,21 +35,29 @@ const STATUS_ACTIONS = {
 const fieldClassName =
   'w-full rounded-md border border-zinc-200 bg-white px-3.5 py-3 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-black focus:ring-2 focus:ring-black/10';
 
+const collapseToggleClassName = `${buttonBaseClassName} h-9 w-9 border border-zinc-200 bg-white p-0 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 focus:ring-zinc-300`;
+const sectionCountClassName = 'inline-flex min-h-7 items-center rounded-full bg-zinc-100 px-2.5 text-xs font-black tracking-[0.08em] text-zinc-600';
+
+const CollapseIcon = ({ collapsed }) => (
+  <svg
+    viewBox="0 0 20 20"
+    aria-hidden="true"
+    className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 8l5 5 5-5" />
+  </svg>
+);
+
 const formatStatusLabel = (status) =>
   String(status || 'UNKNOWN')
     .toLowerCase()
     .replaceAll('_', ' ')
     .replace(/\b\w/g, (letter) => letter.toUpperCase());
-
-const getStatusTone = (status) => {
-  const normalized = String(status || '').toLowerCase();
-
-  if (normalized.includes('rejected') || normalized.includes('failed')) {
-    return 'border-red-200 bg-red-50 text-red-600';
-  }
-
-  return 'border-zinc-200 bg-zinc-50 text-zinc-700';
-};
 
 const getRecommendationTone = (value) => {
   const normalized = String(value || '').toLowerCase();
@@ -205,6 +214,31 @@ const DetailCard = ({ title, description, children }) => (
   </section>
 );
 
+const CollapsibleDetailCard = ({ title, description, count, collapsed, onToggle, children }) => (
+  <section className="rounded-md border border-zinc-200 bg-white shadow-sm">
+    <div className="flex flex-col gap-3 border-b border-zinc-100 px-6 py-5 sm:flex-row sm:items-start sm:justify-between lg:px-8">
+      <div>
+        <div className="flex flex-wrap items-center gap-3">
+          <h2 className="app-section-title text-2xl text-zinc-950">{title}</h2>
+          {count !== undefined && <span className={sectionCountClassName}>{count}</span>}
+        </div>
+        {description && <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">{description}</p>}
+      </div>
+      <button
+        type="button"
+        className={collapseToggleClassName}
+        onClick={onToggle}
+        aria-expanded={!collapsed}
+        aria-label={collapsed ? `Expand ${title}` : `Collapse ${title}`}
+      >
+        <CollapseIcon collapsed={collapsed} />
+      </button>
+    </div>
+
+    {collapsed ? null : <div className="p-6 lg:p-8">{children}</div>}
+  </section>
+);
+
 const MetricTile = ({ label, value }) => (
   <div className="rounded-md border border-zinc-200 bg-zinc-50 px-4 py-4">
     <p className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-zinc-500">{label}</p>
@@ -223,11 +257,8 @@ const PipelineProgress = ({ status }) => {
       <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
         <div>
           <p className={`text-xs font-extrabold uppercase tracking-[0.18em] ${tone.eyebrow}`}>
-            Pipeline position
+            Hiring progress
           </p>
-          <h2 className="app-section-title-sm mt-1 text-xl text-zinc-950">
-            {formatStatusLabel(status)}
-          </h2>
         </div>
         <div className="min-w-[150px] text-left sm:text-right">
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Progress</p>
@@ -250,24 +281,30 @@ const PipelineProgress = ({ status }) => {
             return (
               <div key={stage.key} className="relative px-2">
                 {index < PIPELINE_STAGES.length - 1 && (
-                  <div className={`absolute left-1/2 top-5 h-1 w-full ${connectorClass}`} aria-hidden="true" />
+                  <div
+                    className={`pipeline-connector absolute left-1/2 top-5 h-1 w-full ${connectorClass} ${
+                      isComplete || isCurrent ? 'pipeline-connector-active' : ''
+                    }`}
+                    aria-hidden="true"
+                  />
                 )}
 
                 <div
-                  className={`relative z-10 flex min-h-[142px] flex-col rounded-md border p-3 transition ${
+                  className={`pipeline-stage-card relative z-10 flex min-h-[142px] flex-col rounded-md border p-3 transition ${
                     isCurrent
-                      ? `${tone.currentCard} shadow-sm`
+                      ? `${tone.currentCard} pipeline-stage-current shadow-sm`
                       : isComplete
-                        ? 'border-zinc-300 bg-white text-zinc-950'
+                        ? 'pipeline-stage-complete border-zinc-300 bg-white text-zinc-950'
                         : 'border-zinc-200 bg-zinc-100 text-zinc-500'
                   }`}
+                  style={{ animationDelay: `${index * 70}ms` }}
                 >
                   <div
-                    className={`grid h-10 w-10 place-items-center rounded-full border-2 text-sm font-black shadow-lg ${
+                    className={`pipeline-stage-dot grid h-10 w-10 place-items-center rounded-full border-2 text-sm font-black shadow-lg ${
                       isCurrent
-                        ? tone.currentDot
+                        ? `${tone.currentDot} pipeline-stage-dot-current`
                         : isComplete
-                          ? 'border-zinc-950 bg-white text-zinc-950 shadow-zinc-200'
+                          ? 'pipeline-stage-dot-complete border-zinc-950 bg-white text-zinc-950 shadow-zinc-200'
                           : 'border-zinc-300 bg-white text-zinc-400 shadow-zinc-100'
                     }`}
                     aria-hidden="true"
@@ -313,6 +350,10 @@ const CandidateDetail = () => {
   const [error, setError] = useState('');
   const [actionLoading, setActionLoading] = useState('');
   const [note, setNote] = useState('');
+  const [collapsedSections, setCollapsedSections] = useState({
+    aiEvidence: true,
+    statusHistory: true,
+  });
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleData, setScheduleData] = useState({ date: '', time: '', location: '', meetingLink: '' });
 
@@ -435,6 +476,12 @@ const CandidateDetail = () => {
   };
 
   const actions = STATUS_ACTIONS[candidate?.status] || [];
+  const toggleSection = (sectionKey) => {
+    setCollapsedSections((current) => ({
+      ...current,
+      [sectionKey]: !current[sectionKey],
+    }));
+  };
   const glmAnalysis = candidate?.glmAnalysis;
 
   const metrics = useMemo(() => {
@@ -505,12 +552,6 @@ const CandidateDetail = () => {
               </Link>
 
               <div className="mt-4 flex flex-wrap items-center gap-3">
-                <span
-                  className={`inline-flex rounded-full border px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] ${getStatusTone(candidate.status)}`}
-                >
-                  {formatStatusLabel(candidate.status)}
-                </span>
-
                 <span className="text-sm font-semibold text-zinc-500">
                   {candidate.job?.title || 'No linked role'}{candidate.job?.department ? ` · ${candidate.job.department}` : ''}
                 </span>
@@ -524,16 +565,6 @@ const CandidateDetail = () => {
               </p>
             </div>
 
-            <div className="flex items-start justify-start lg:justify-end">
-              <a
-                href={`${import.meta.env.VITE_API_BASE || 'http://localhost:3000/api/v1'}/candidates/${id}/cv`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonSecondaryClassName}
-              >
-                Download CV
-              </a>
-            </div>
           </div>
 
           <div className="grid gap-px border-t border-zinc-200 bg-zinc-200 sm:grid-cols-2 xl:grid-cols-4">
@@ -610,9 +641,12 @@ const CandidateDetail = () => {
             )}
 
             {aiReport?.session && (
-              <DetailCard
+              <CollapsibleDetailCard
                 title="AI interview evidence"
                 description="Latest interview session status, score breakdown, and question-level evidence."
+                count={(aiReport.session.questions || []).length}
+                collapsed={collapsedSections.aiEvidence}
+                onToggle={() => toggleSection('aiEvidence')}
               >
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                   <MetricTile label="Session status" value={formatStatusLabel(aiReport.session.status)} />
@@ -680,12 +714,15 @@ const CandidateDetail = () => {
                     </article>
                   ))}
                 </div>
-              </DetailCard>
+              </CollapsibleDetailCard>
             )}
 
-            <DetailCard
+            <CollapsibleDetailCard
               title="Status history"
               description="Every workflow transition recorded for this candidate."
+              count={history.length}
+              collapsed={collapsedSections.statusHistory}
+              onToggle={() => toggleSection('statusHistory')}
             >
               {history.length === 0 ? (
                 <div className="rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-sm font-semibold text-zinc-500">
@@ -706,7 +743,7 @@ const CandidateDetail = () => {
                   ))}
                 </div>
               )}
-            </DetailCard>
+            </CollapsibleDetailCard>
           </div>
 
           <div className="grid gap-6 self-start xl:sticky xl:top-6">
