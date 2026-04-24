@@ -243,7 +243,7 @@ const Login = () => {
                 <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
                   <span>Name</span>
                   <input
-                    className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                    className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-medium normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
@@ -257,7 +257,7 @@ const Login = () => {
               <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
                 <span>Email address</span>
                 <input
-                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-medium normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
@@ -270,7 +270,7 @@ const Login = () => {
               <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
                 <span>Password</span>
                 <input
-                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-semibold normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-medium normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
@@ -332,7 +332,7 @@ const Login = () => {
                   </label>
                   <button
                     type="button"
-                    className="shrink-0 text-xs font-semibold tracking-[-0.01em] text-[#4d4a82] transition hover:text-[#111827]"
+                    className="shrink-0 text-xs font-black tracking-normal text-[#4d4a82] transition hover:text-[#111827]"
                   >
                     Forgot Password
                   </button>
@@ -341,7 +341,7 @@ const Login = () => {
 
               <button
                 type="submit"
-                className="group relative mt-1 inline-flex min-h-14 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-0 bg-[#111827] text-sm font-semibold tracking-[-0.01em] text-white shadow-[0_22px_45px_rgba(17,24,39,0.22)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#171717] hover:shadow-[0_28px_60px_rgba(17,24,39,0.28)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
+                className="group relative mt-1 inline-flex min-h-14 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-0 bg-[#111827] text-sm font-black tracking-[0.03em] text-white shadow-[0_22px_45px_rgba(17,24,39,0.22)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#171717] hover:shadow-[0_28px_60px_rgba(17,24,39,0.28)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
                 disabled={loading}
                 aria-busy={loading}
               >
@@ -364,7 +364,7 @@ const Login = () => {
 
             <button
               type="button"
-              className="inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-[#d4d4d4] bg-white/90 text-sm font-semibold tracking-[-0.01em] text-[#2a2a2a] shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-[#111827]/30 hover:bg-white hover:shadow-[0_16px_38px_rgba(17,24,39,0.10)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
+              className="inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-[#d4d4d4] bg-white/90 text-sm font-black tracking-[0.03em] text-[#2a2a2a] shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-[#111827]/30 hover:bg-white hover:shadow-[0_16px_38px_rgba(17,24,39,0.10)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
               aria-busy={googleLoading}
@@ -398,7 +398,7 @@ const Login = () => {
               {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button
                 type="button"
-                className="font-semibold tracking-[-0.01em] text-[#171717] underline decoration-[#171717]/20 underline-offset-4 transition hover:decoration-[#171717]"
+                className="font-black tracking-normal text-[#171717] underline decoration-[#171717]/20 underline-offset-4 transition hover:decoration-[#171717]"
                 onClick={() => switchMode(isRegister ? 'login' : 'register')}
               >
                 {isRegister ? 'Log In' : 'Sign Up'}

@@ -11,4 +11,4 @@ export const buttonDangerClassName = `${buttonBaseClassName} min-h-11 border bor
 
 export const buttonPrimaryElevatedClassName = `${buttonPrimaryClassName} min-h-12 px-6 shadow-[0_14px_34px_rgba(15,23,42,0.18)] hover:-translate-y-0.5 hover:shadow-[0_18px_42px_rgba(15,23,42,0.24)] disabled:translate-y-0 disabled:bg-zinc-300 disabled:text-zinc-500 disabled:shadow-none`;
 
-export const authButtonTextClassName = 'text-sm font-semibold tracking-[0.08em]';
+export const authButtonTextClassName = 'text-sm font-black tracking-[0.08em]';
