@@ -7,7 +7,6 @@
     "dev": "nodemon --exec ts-node server.ts",
     "start": "node dist/server.js",
     "build": "tsc",
-    "seed": "ts-node prisma/seed.ts"
   },
   "keywords": [],
   "author": "",
