@@ -667,6 +667,48 @@ a {
   animation-name: candidate-soft-scale;
 }
 
+.pipeline-stage-card {
+  animation: pipeline-stage-in 460ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pipeline-stage-current {
+  overflow: hidden;
+  animation:
+    pipeline-stage-in 460ms cubic-bezier(0.16, 1, 0.3, 1) both,
+    pipeline-current-glow 1.9s ease-in-out infinite;
+}
+
+.pipeline-stage-current::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 0%, rgba(255, 255, 255, 0.62) 42%, transparent 68%);
+  transform: translateX(-120%);
+  animation: pipeline-current-sheen 2.4s ease-in-out infinite;
+  pointer-events: none;
+}
+
+.pipeline-stage-dot-current {
+  animation: pipeline-current-dot 1.25s ease-out infinite;
+}
+
+.pipeline-stage-dot-complete {
+  animation: pipeline-complete-pop 520ms cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.pipeline-connector {
+  overflow: hidden;
+}
+
+.pipeline-connector-active::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.75), transparent);
+  transform: translateX(-100%);
+  animation: pipeline-connector-flow 1.8s ease-in-out infinite;
+}
+
 .candidate-open-button {
   transition:
     background-color 180ms ease,
@@ -721,6 +763,35 @@ a {
   background: #000000;
   box-shadow: 0 10px 24px rgba(24, 24, 27, 0.18);
   transform: translateY(-1px);
+}
+
+.status-badge {
+  position: relative;
+  align-items: center;
+  gap: 0.45rem;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.status-badge-working {
+  border-color: #d4d4d8;
+  background: linear-gradient(90deg, #fafafa 0%, #f4f4f5 48%, #fafafa 100%);
+  background-size: 220% 100%;
+  color: #27272a;
+  box-shadow: 0 0 0 1px rgba(24, 24, 27, 0.02);
+  animation:
+    status-badge-shimmer 1.8s ease-in-out infinite,
+    status-badge-breathe 1.8s ease-in-out infinite;
+}
+
+.status-badge-dot {
+  width: 0.42rem;
+  height: 0.42rem;
+  flex: 0 0 auto;
+  border-radius: 999px;
+  background: #18181b;
+  box-shadow: 0 0 0 0 rgba(24, 24, 27, 0.22);
+  animation: status-badge-dot-pulse 1.15s ease-out infinite;
 }
 
 .job-chat-surface {
@@ -855,6 +926,80 @@ a {
   }
 }
 
+@keyframes pipeline-stage-in {
+  from {
+    opacity: 0;
+    transform: translateY(10px) scale(0.97);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes pipeline-current-glow {
+  0%,
+  100% {
+    box-shadow:
+      0 1px 2px rgba(24, 24, 27, 0.08),
+      0 0 0 0 rgba(24, 24, 27, 0);
+  }
+
+  50% {
+    box-shadow:
+      0 10px 24px rgba(24, 24, 27, 0.12),
+      0 0 0 4px rgba(24, 24, 27, 0.055);
+  }
+}
+
+@keyframes pipeline-current-sheen {
+  0%,
+  34% {
+    transform: translateX(-120%);
+  }
+
+  72%,
+  100% {
+    transform: translateX(120%);
+  }
+}
+
+@keyframes pipeline-current-dot {
+  0% {
+    transform: scale(0.88);
+    box-shadow: 0 0 0 0 rgba(24, 24, 27, 0.28);
+  }
+
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 8px rgba(24, 24, 27, 0);
+  }
+
+  100% {
+    transform: scale(0.88);
+    box-shadow: 0 0 0 0 rgba(24, 24, 27, 0);
+  }
+}
+
+@keyframes pipeline-complete-pop {
+  from {
+    opacity: 0.7;
+    transform: scale(0.86);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes pipeline-connector-flow {
+  to {
+    transform: translateX(100%);
+  }
+}
+
 @keyframes job-chat-bubble-in {
   from {
     opacity: 0;
@@ -884,6 +1029,47 @@ a {
   40% {
     opacity: 1;
     transform: translateY(-3px);
+  }
+}
+
+@keyframes status-badge-shimmer {
+  0% {
+    background-position: 120% 0;
+  }
+
+  100% {
+    background-position: -120% 0;
+  }
+}
+
+@keyframes status-badge-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 1px rgba(24, 24, 27, 0.02);
+  }
+
+  50% {
+    box-shadow: 0 0 0 4px rgba(24, 24, 27, 0.045);
+  }
+}
+
+@keyframes status-badge-dot-pulse {
+  0% {
+    opacity: 0.9;
+    transform: scale(0.82);
+    box-shadow: 0 0 0 0 rgba(24, 24, 27, 0.24);
+  }
+
+  70% {
+    opacity: 1;
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(24, 24, 27, 0);
+  }
+
+  100% {
+    opacity: 0.9;
+    transform: scale(0.82);
+    box-shadow: 0 0 0 0 rgba(24, 24, 27, 0);
   }
 }
 
@@ -979,12 +1165,20 @@ a {
   .candidate-metric-pop,
   .candidate-score-pop,
   .candidate-radar-reveal,
+  .pipeline-stage-card,
+  .pipeline-stage-current,
+  .pipeline-stage-current::after,
+  .pipeline-stage-dot-current,
+  .pipeline-stage-dot-complete,
+  .pipeline-connector-active::after,
   .job-page-enter,
   .job-row,
   .job-metric-pop,
   .job-chat-bubble,
   .job-chat-bubble-assistant::after,
-  .job-thinking-dots span {
+  .job-thinking-dots span,
+  .status-badge-working,
+  .status-badge-dot {
     animation: none;
   }
 }

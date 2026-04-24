@@ -89,6 +89,7 @@ export async function listJobs(filters: { status?: string; page: number; limit: 
       skip,
       take: filters.limit,
       orderBy: { createdAt: 'desc' },
+      include: { _count: { select: { candidates: true } } },
     }),
     prisma.job.count({ where }),
   ]);

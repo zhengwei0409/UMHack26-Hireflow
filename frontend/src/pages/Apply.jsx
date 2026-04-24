@@ -9,6 +9,8 @@ const inputClassName =
 const fileInputClassName =
   'block w-full rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm font-semibold text-zinc-600 file:mr-3 file:rounded-md file:border-0 file:bg-black file:px-3.5 file:py-2 file:text-sm file:font-extrabold file:text-white hover:border-zinc-400';
 
+const INTERVIEW_DURATION_LABEL = '15 minutes';
+
 const formatDate = (date) => {
   if (!date) return 'No date';
 
@@ -88,7 +90,7 @@ const Apply = () => {
       { label: 'Department', value: job.department || 'General' },
       { label: 'Location', value: job.location || 'Flexible' },
       { label: 'Closing date', value: formatDate(job.closingDate) },
-      { label: 'Requirements', value: job.requirements?.length || 0 },
+      { label: 'Interview time', value: INTERVIEW_DURATION_LABEL },
     ];
   }, [job]);
 
