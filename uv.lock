@@ -1223,16 +1223,17 @@ version = "0.1.0"
 source = { editable = "dashboard" }
 dependencies = [
     { name = "fastapi" },
-    { name = "joinly-client" },
+    { name = "httpx" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.115.0" },
-    { name = "joinly-client", editable = "client" },
+    { name = "httpx", specifier = ">=0.27.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.32.0" },
 ]
+provides-extras = ["dev"]
 
 [[package]]
 name = "jsonschema"
