@@ -45,6 +45,37 @@ const getStatusTone = (status) => {
   return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
+const workingStatuses = new Set([
+  'CV_PARSING',
+  'CV_UNDER_REVIEW',
+  'AI_INTERVIEW_INVITED',
+  'AI_INTERVIEW_IN_PROGRESS',
+  'AI_INTERVIEW_COMPLETED',
+  'INTERVIEW_PENDING',
+  'INTERVIEW_SCHEDULED',
+  'INTERVIEW_CONFIRMED',
+  'INTERVIEW_DONE',
+  'OFFER_GENERATING',
+  'ONBOARDING',
+]);
+
+const isWorkingStatus = (status) => workingStatuses.has(String(status || '').toUpperCase());
+
+const StatusBadge = ({ status }) => {
+  const working = isWorkingStatus(status);
+
+  return (
+    <span
+      className={`status-badge inline-flex rounded-full border px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] ${
+        working ? 'status-badge-working' : 'border-zinc-200 bg-zinc-50 text-zinc-700'
+      }`}
+    >
+      {working && <span className="status-badge-dot" aria-hidden="true" />}
+      <span>{formatStatusLabel(status)}</span>
+    </span>
+  );
+};
+
 const formatScore = (candidate) => {
   if (candidate.aiInterviewScore !== null && candidate.aiInterviewScore !== undefined) {
     return `${candidate.aiInterviewScore.toFixed(1)}%`;
@@ -56,6 +87,7 @@ const formatScore = (candidate) => {
 
   return '-';
 };
+
 
 const JobDetail = () => {
   const { id } = useParams();
@@ -348,31 +380,57 @@ const JobDetail = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-200">
-                  {shortlist.map((candidate) => (
-                    <tr key={candidate.id}>
-                      <td className="px-4 py-4 text-sm font-extrabold text-zinc-950">
-                        #{candidate.aiInterviewRank || '-'}
-                      </td>
-                      <td className="px-4 py-4 text-sm font-semibold text-zinc-700">{candidate.fullName}</td>
-                      <td className="px-4 py-4 text-sm font-extrabold text-zinc-950">
-                        {candidate.aiInterviewScore ? `${candidate.aiInterviewScore.toFixed(1)}%` : '-'}
-                      </td>
-                      <td className="px-4 py-4 text-sm font-semibold text-zinc-700">{candidate.proctorFlagCount}</td>
-                      <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-700">
-                          {formatStatusLabel(candidate.status)}
-                        </span>
-                      </td>
-                      <td className="px-4 py-4 text-right">
-                        <Link
-                          to={`/candidates/${candidate.id}`}
-                          className={`${buttonSecondaryClassName} min-h-10 px-3`}
-                        >
-                          Review
-                        </Link>
-                      </td>
-                    </tr>
-                  ))}
+                  {shortlist.map((candidate, index) => {
+                    const rank = index + 1;
+                    const rowStyle =
+                      rank === 1
+                        ? 'bg-yellow-50'
+                        : rank === 2
+                        ? 'bg-zinc-50'
+                        : rank === 3
+                        ? 'bg-amber-50'
+                        : '';
+                    const medal = rank === 1 ? '🥇' : rank === 2 ? '🥈' : rank === 3 ? '🥉' : null;
+                    const rankColor =
+                      rank === 1
+                        ? 'text-yellow-600'
+                        : rank === 2
+                        ? 'text-zinc-500'
+                        : rank === 3
+                        ? 'text-amber-600'
+                        : 'text-zinc-950';
+
+                    return (
+                      <tr key={candidate.id} className={rowStyle}>
+                        <td className={`px-4 py-4 text-sm font-extrabold ${rankColor}`}>
+                          {medal ? (
+                            <span className="flex items-center gap-1.5">
+                              <span>{medal}</span>
+                              <span>#{candidate.aiInterviewRank || rank}</span>
+                            </span>
+                          ) : (
+                            `#${candidate.aiInterviewRank || rank}`
+                          )}
+                        </td>
+                        <td className="px-4 py-4 text-sm font-semibold text-zinc-700">{candidate.fullName}</td>
+                        <td className={`px-4 py-4 text-sm font-extrabold ${rank <= 3 ? rankColor : 'text-zinc-950'}`}>
+                          {candidate.aiInterviewScore ? `${candidate.aiInterviewScore.toFixed(1)}%` : '-'}
+                        </td>
+                        <td className="px-4 py-4 text-sm font-semibold text-zinc-700">{candidate.proctorFlagCount}</td>
+                        <td className="px-4 py-4">
+                          <StatusBadge status={candidate.status} />
+                        </td>
+                        <td className="px-4 py-4 text-right">
+                          <Link
+                            to={`/candidates/${candidate.id}`}
+                            className={`${buttonSecondaryClassName} min-h-10 px-3`}
+                          >
+                            Review
+                          </Link>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -416,9 +474,7 @@ const JobDetail = () => {
                         </span>
                       </td>
                       <td className="px-4 py-4">
-                        <span className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-700">
-                          {formatStatusLabel(candidate.status)}
-                        </span>
+                        <StatusBadge status={candidate.status} />
                       </td>
                       <td className="px-4 py-4 text-sm font-semibold text-zinc-600">
                         {candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : '-'}

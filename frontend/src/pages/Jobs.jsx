@@ -105,7 +105,7 @@ const JobRow = ({ job, index, onClose }) => {
         </Link>
         <button
           type="button"
-          className={`${compactSecondaryButtonClassName} w-32 bg-zinc-50 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-100 hover:text-zinc-800`}
+          className={`${secondaryButtonClassName} w-32`}
           onClick={() => onClose(job.id)}
         >
           Close role
@@ -346,15 +346,7 @@ const Jobs = () => {
           </div>
         </section>
 
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm font-semibold text-zinc-500">
-            <p>
-              Open jobs <span className="text-zinc-950">{openJobs.length}</span>
-            </p>
-            <p>
-              Closed roles <span className="text-zinc-950">{closedJobs.length}</span>
-            </p>
-          </div>
+        <div className="flex justify-end">
           <button
             type="button"
             className={primaryButtonClassName}
