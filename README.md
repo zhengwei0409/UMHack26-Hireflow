@@ -151,19 +151,44 @@ UMHack26/
 │   │   │   ├── interview-orchestrator.service.ts ← AI interview sessions
 │   │   │   ├── ranking.service.ts                ← Scoring + shortlist
 │   │   │   ├── proctor.service.ts                ← Integrity event logging
-│   │   │   └── workflow-automation.service.ts
-│   │   ├── middleware/      ← Auth
+│   │   │   ├── workflow-automation.service.ts
+│   │   │   ├── candidate.service.ts
+│   │   │   ├── job.service.ts
+│   │   │   ├── auth.service.ts
+│   │   │   ├── dashboard.service.ts
+│   │   │   └── workflow-state.service.ts
+│   │   ├── middleware/      ← Auth (JWT)
+│   │   ├── types/           ← TypeScript type shims
+│   │   ├── utils/
 │   │   └── workflow/        ← State machine (states.ts, engine.ts)
 │   ├── prisma/
-│   │   └── schema.prisma    ← Database schema
+│   │   ├── schema.prisma    ← Database schema
+│   │   └── migrations/      ← Migration history
 │   ├── server.ts
 │   └── .env.example
 ├── frontend/                ← React + Vite
 │   ├── src/
-│   │   ├── pages/           ← All pages (including InterviewRoom, RankedShortlist)
+│   │   ├── pages/
+│   │   │   ├── Apply.jsx              ← Candidate CV upload portal
+│   │   │   ├── Dashboard.jsx          ← HR hiring funnel overview
+│   │   │   ├── Jobs.jsx               ← Job listing & management
+│   │   │   ├── JobDetail.jsx          ← Job config & candidate pipeline
+│   │   │   ├── Candidates.jsx         ← Candidate list
+│   │   │   ├── CandidateDetail.jsx    ← GLM analysis, workflow actions, AI report
+│   │   │   ├── InterviewIntro.jsx     ← Consent screen before AI interview
+│   │   │   ├── InterviewRoom.jsx      ← AI interview (DSA, MCQ, Behavioral)
+│   │   │   ├── InterviewComplete.jsx  ← Post-submission score breakdown
+│   │   │   ├── InterviewResponse.jsx  ← Candidate confirm / reschedule
+│   │   │   ├── Login.jsx              ← HR login
+│   │   │   └── AuthCallback.jsx       ← Google OAuth callback
 │   │   ├── components/
-│   │   └── services/api.js  ← API client
+│   │   │   └── SharedLayout.jsx
+│   │   ├── services/
+│   │   │   └── api.js        ← API client
+│   │   └── styles/
+│   │       └── buttonStyles.js
 │   └── vite.config.js
+├── joinly-meetingbot/       ← [Not integrated] Joinly AI meeting bot (Python)
 └── docs/
     ├── backend.md           ← API docs
     ├── workflow-states.md   ← State machine reference
