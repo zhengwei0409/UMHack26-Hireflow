@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import * as dashboardService from '../services/dashboard.service';
 
-export async function getDashboard(req: Request, res: Response) {
+export async function getDashboard(_req: Request, res: Response) {
   try {
     const data = await dashboardService.getDashboardData();
     return res.status(200).json({ success: true, data });

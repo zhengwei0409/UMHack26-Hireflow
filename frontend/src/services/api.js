@@ -153,13 +153,6 @@ export const candidates = {
       body: JSON.stringify({ note }),
     }).then(handleResponse),
 
-  rejectAfterAi: (id, note) =>
-    fetch(`${API_BASE}/candidates/${id}/actions/reject-after-ai`, {
-      method: 'POST',
-      headers: headers(),
-      body: JSON.stringify({ note }),
-    }).then(handleResponse),
-
   markInterviewDone: (id) =>
     fetch(`${API_BASE}/candidates/${id}/actions/mark-interview-done`, {
       method: 'POST',

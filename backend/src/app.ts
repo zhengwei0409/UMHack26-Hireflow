@@ -20,7 +20,7 @@ app.use('/api/v1/candidates', candidateRoutes);
 app.use('/api/v1/dashboard', dashboardRoutes);
 app.use('/api/v1/interviews', interviewRoutes);
 
-app.get('/health', (req, res) => {
+app.get('/health', (_req, res) => {
   res.json({ status: 'ok' });
 });
 

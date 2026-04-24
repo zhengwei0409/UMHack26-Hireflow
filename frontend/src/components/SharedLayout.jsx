@@ -149,7 +149,7 @@ const SharedLayout = () => {
                   to={item.to}
                   className={({ isActive }) =>
                     `inline-flex h-9 shrink-0 items-center gap-2 rounded-md px-3 text-xs font-semibold tracking-[-0.01em] transition ${
-                      isActive ? 'bg-black text-white' : 'border border-zinc-200 bg-white text-zinc-600 hover:text-black'
+                      isActive ? 'bg-black !text-white' : 'border border-zinc-200 bg-white text-zinc-600 hover:text-black'
                     }`
                   }
                 >

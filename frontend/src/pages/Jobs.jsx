@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import {
   buttonBaseClassName,
@@ -15,6 +15,8 @@ const textareaClassName = `${inputClassName} min-h-[120px] py-3`;
 const primaryButtonClassName = `${buttonPrimaryClassName} primary-cta`;
 const secondaryButtonClassName = buttonSecondaryClassName;
 const compactSecondaryButtonClassName = `${buttonCompactClassName} border border-zinc-200`;
+const collapseToggleClassName = `${buttonBaseClassName} h-9 w-9 border border-zinc-200 bg-white p-0 text-zinc-500 hover:border-zinc-300 hover:bg-zinc-50 hover:text-zinc-950 focus:ring-zinc-300`;
+const sectionCountClassName = 'inline-flex min-h-7 items-center rounded-full bg-zinc-100 px-2.5 text-xs font-black tracking-[0.08em] text-zinc-600';
 
 const initialChatMessages = [
   {
@@ -29,6 +31,21 @@ const statusOptions = [
   ['OPEN', 'Open'],
   ['CLOSED', 'Closed'],
 ];
+
+const CollapseIcon = ({ collapsed }) => (
+  <svg
+    viewBox="0 0 20 20"
+    aria-hidden="true"
+    className={`h-4 w-4 transition-transform ${collapsed ? '' : 'rotate-180'}`}
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="1.8"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M5 8l5 5 5-5" />
+  </svg>
+);
 
 const getApplicantCount = (job) => Number(job._count?.candidates || job.candidateCount || 0);
 
@@ -52,20 +69,12 @@ const formatClosingLabel = (job) => {
   return `${isDeadlineClosed(job) ? 'Deadline passed' : 'Deadline'} ${formatDate(job.closingDate)}`;
 };
 
-const getRequirements = (requirements) => {
-  if (Array.isArray(requirements)) return requirements.filter(Boolean);
-  if (typeof requirements === 'string') return requirements.split('\n').filter((requirement) => requirement.trim());
-  return [];
-};
-
 const JobRow = ({ job, index, onClose }) => {
   const applicantCount = getApplicantCount(job);
-  const requirements = getRequirements(job.requirements).slice(0, 3);
-  const threshold = Number(job.autoScreenThreshold ?? 60);
 
   return (
     <article
-      className="job-row grid gap-5 px-5 py-5 lg:grid-cols-[minmax(300px,1fr)_150px_150px_132px]"
+      className="job-row grid gap-5 px-5 py-5 lg:grid-cols-[minmax(300px,1fr)_150px_132px]"
       style={{ animationDelay: `${Math.min(index * 45, 240)}ms` }}
     >
       <div className="min-w-0">
@@ -79,38 +88,11 @@ const JobRow = ({ job, index, onClose }) => {
         <p className="mt-1 text-sm font-semibold text-zinc-500">
           {job.location || 'Location TBD'} / Posted {formatDate(job.createdAt)} / {formatClosingLabel(job)}
         </p>
-        <p className="mt-3 line-clamp-2 max-w-3xl text-sm font-semibold leading-6 text-zinc-600">
-          {job.description || 'No job description added yet.'}
-        </p>
-
-        {requirements.length > 0 && (
-          <div className="mt-4 flex flex-wrap gap-2">
-            {requirements.map((requirement) => (
-              <span
-                key={`${job.id}-${requirement}`}
-                className="rounded-md border border-zinc-200 bg-white px-2.5 py-1 text-xs font-bold text-zinc-600"
-              >
-                {requirement}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
 
       <div className="job-metric-pop grid content-start gap-1">
         <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">Applicants</p>
         <p className="text-3xl font-black tracking-tight text-zinc-950">{applicantCount}</p>
-      </div>
-
-      <div className="grid content-start gap-3">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-zinc-400">AI threshold</p>
-          <p className="mt-1 text-sm font-black text-zinc-950">{threshold}% pass score</p>
-        </div>
-        <div className="h-2 overflow-hidden rounded-full bg-zinc-100">
-          <div className="h-full rounded-full bg-zinc-950" style={{ width: `${Math.min(100, Math.max(0, threshold))}%` }} />
-        </div>
-        <p className="text-xs font-semibold text-zinc-500">Shortlist {job.shortlistSize ?? 10}</p>
       </div>
 
       <div className="flex flex-col items-start gap-3 lg:items-end">
@@ -156,19 +138,30 @@ const ClosedJobRow = ({ job, index }) => (
 );
 
 const Jobs = () => {
+  const [searchParams] = useSearchParams();
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [showForm, setShowForm] = useState(false);
+  const [showForm, setShowForm] = useState(() => searchParams.get('create') === '1');
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ status: 'ALL', query: '' });
   const [chatMessages, setChatMessages] = useState(initialChatMessages);
   const [chatInput, setChatInput] = useState('');
   const [createdJob, setCreatedJob] = useState(null);
+  const [collapsedSections, setCollapsedSections] = useState({
+    open: false,
+    closed: true,
+  });
 
   useEffect(() => {
     loadJobs();
   }, []);
+
+  useEffect(() => {
+    if (searchParams.get('create') === '1') {
+      setShowForm(true);
+    }
+  }, [searchParams]);
 
   const loadJobs = async () => {
     try {
@@ -261,13 +254,20 @@ const Jobs = () => {
     }
   };
 
+  const toggleSection = (sectionKey) => {
+    setCollapsedSections((current) => ({
+      ...current,
+      [sectionKey]: !current[sectionKey],
+    }));
+  };
+
   const filteredJobs = useMemo(() => {
     const query = filters.query.trim().toLowerCase();
 
     return jobs.filter((job) => {
       const statusMatch =
         filters.status === 'ALL' || String(job.status || 'OPEN').toUpperCase() === filters.status;
-      const searchText = [job.title, job.department, job.location, job.description].filter(Boolean).join(' ').toLowerCase();
+      const searchText = [job.title, job.department, job.location].filter(Boolean).join(' ').toLowerCase();
       const queryMatch = !query || searchText.includes(query);
 
       return statusMatch && queryMatch;
@@ -301,7 +301,7 @@ const Jobs = () => {
         <section className="job-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
           <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
             <div>
-              <h1 className="text-3xl font-black tracking-[-0.05em] text-zinc-950 sm:text-4xl">Jobs</h1>
+              <h1 className="app-page-title text-3xl text-zinc-950 sm:text-4xl">Jobs</h1>
               <div className="mt-5 grid gap-5 sm:grid-cols-3">
                 {metrics.map((metric, index) => (
                   <div
@@ -367,7 +367,7 @@ const Jobs = () => {
         {showForm && (
           <section className="job-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
             <div className="mb-6 flex flex-col gap-2">
-              <h2 className="text-2xl font-black tracking-[-0.04em] text-zinc-950">Create job</h2>
+              <h2 className="app-section-title text-2xl text-zinc-950">Create job</h2>
               <p className="text-sm font-semibold leading-6 text-zinc-600">
                 GLM will ask for missing details. When enough information is available, the job is created automatically.
               </p>
@@ -464,7 +464,7 @@ const Jobs = () => {
         ) : filteredJobs.length === 0 ? (
           <section className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">No jobs found</p>
-            <h2 className="mt-3 text-2xl font-black tracking-tight text-zinc-950">
+            <h2 className="app-section-title mt-3 text-2xl text-zinc-950">
               {jobs.length === 0 ? 'Create your first job listing' : 'No role matches this view'}
             </h2>
             <p className="mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 text-zinc-600">
@@ -487,41 +487,63 @@ const Jobs = () => {
             {openJobs.length > 0 && (
               <section className="job-page-enter rounded-xl border border-zinc-200 bg-white shadow-sm">
                 <div className="flex flex-col gap-2 border-b border-zinc-200 px-5 py-5 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <h2 className="text-2xl font-black tracking-[-0.04em] text-zinc-950">Open jobs</h2>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="app-section-title text-2xl text-zinc-950">Open jobs</h2>
+                    <span className={sectionCountClassName}>{openJobs.length}</span>
                   </div>
-                  <p className="text-sm font-black text-zinc-500">{openJobs.length} roles</p>
+                  <button
+                    type="button"
+                    className={collapseToggleClassName}
+                    onClick={() => toggleSection('open')}
+                    aria-expanded={!collapsedSections.open}
+                    aria-label={collapsedSections.open ? 'Expand open jobs' : 'Collapse open jobs'}
+                  >
+                    <CollapseIcon collapsed={collapsedSections.open} />
+                  </button>
                 </div>
 
-                <div className="divide-y divide-zinc-100">
-                  {openJobs.map((job, index) => (
-                    <JobRow key={job.id} job={job} index={index} onClose={handleClose} />
-                  ))}
-                </div>
+                {collapsedSections.open ? null : (
+                  <div className="divide-y divide-zinc-100">
+                    {openJobs.map((job, index) => (
+                      <JobRow key={job.id} job={job} index={index} onClose={handleClose} />
+                    ))}
+                  </div>
+                )}
               </section>
             )}
 
             {closedJobs.length > 0 && (
               <section className="job-page-enter overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
                 <div className="flex flex-col gap-2 border-b border-zinc-100 bg-zinc-50 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
-                  <div>
-                    <h2 className="text-lg font-black tracking-tight text-zinc-800">Closed roles</h2>
+                  <div className="flex flex-wrap items-center gap-3">
+                    <h2 className="app-section-title-sm text-lg text-zinc-800">Closed roles</h2>
+                    <span className={sectionCountClassName}>{closedJobs.length}</span>
                   </div>
-                  <p className="text-sm font-black text-zinc-500">{closedJobs.length} roles</p>
+                  <button
+                    type="button"
+                    className={collapseToggleClassName}
+                    onClick={() => toggleSection('closed')}
+                    aria-expanded={!collapsedSections.closed}
+                    aria-label={collapsedSections.closed ? 'Expand closed roles' : 'Collapse closed roles'}
+                  >
+                    <CollapseIcon collapsed={collapsedSections.closed} />
+                  </button>
                 </div>
 
-                <div className="divide-y divide-zinc-100">
-                  {closedJobs.map((job, index) => (
-                    <ClosedJobRow key={job.id} job={job} index={index} />
-                  ))}
-                </div>
+                {collapsedSections.closed ? null : (
+                  <div className="divide-y divide-zinc-100">
+                    {closedJobs.map((job, index) => (
+                      <ClosedJobRow key={job.id} job={job} index={index} />
+                    ))}
+                  </div>
+                )}
               </section>
             )}
 
             {openJobs.length === 0 && closedJobs.length === 0 && (
               <section className="rounded-xl border border-dashed border-zinc-300 bg-white px-6 py-14 text-center lg:px-8">
                 <p className="text-xs font-black uppercase tracking-[0.24em] text-zinc-500">No jobs found</p>
-                <h2 className="mt-3 text-2xl font-black tracking-tight text-zinc-950">No role matches this view</h2>
+                <h2 className="app-section-title mt-3 text-2xl text-zinc-950">No role matches this view</h2>
                 <p className="mx-auto mt-3 max-w-xl text-sm font-semibold leading-6 text-zinc-600">
                   Change the search or status filter to see more listed jobs.
                 </p>

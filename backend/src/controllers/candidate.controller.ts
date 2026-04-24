@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import path from 'path';
 import * as candidateService from '../services/candidate.service';
 import * as automation from '../services/workflow-automation.service';
 

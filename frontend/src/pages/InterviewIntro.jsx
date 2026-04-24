@@ -110,7 +110,7 @@ const InterviewIntro = () => {
               </span>
             </div>
 
-            <h1 className="interview-reveal mt-5 max-w-3xl text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-5xl">
+            <h1 className="app-page-title interview-reveal mt-5 max-w-3xl text-3xl text-zinc-950 sm:text-5xl">
               {session?.candidate?.jobTitle || 'Technical interview'}
             </h1>
             <p className="interview-reveal mt-4 max-w-2xl text-sm font-medium leading-6 text-zinc-600 sm:text-base">
@@ -175,7 +175,7 @@ const InterviewIntro = () => {
             className="interview-modal-card w-full max-w-md rounded-2xl border border-zinc-200 bg-white p-6 shadow-[0_24px_90px_rgba(15,23,42,0.2)]"
             role="dialog"
           >
-            <h2 id="consent-title" className="text-2xl font-extrabold tracking-tight text-zinc-950">
+            <h2 id="consent-title" className="app-section-title text-2xl text-zinc-950">
               Start monitored interview?
             </h2>
             <p className="mt-3 text-sm font-medium leading-6 text-zinc-600">

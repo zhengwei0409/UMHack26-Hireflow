@@ -243,16 +243,6 @@ export async function onRejectInterview(candidateId: string): Promise<void> {
   );
 }
 
-export async function onOfferAccepted(candidateId: string): Promise<void> {
-  await transitionCandidateStatus({
-    candidateId,
-    fromStatus: STATES.OFFER_SENT,
-    toStatus: STATES.HIRED,
-    event: 'OFFER_ACCEPTED',
-    triggeredBy: 'CANDIDATE',
-  });
-}
-
 export async function confirmInterview(candidateId: string, candidateEmail: string): Promise<void> {
   const candidate = await getCandidateWithRelations(candidateId);
 

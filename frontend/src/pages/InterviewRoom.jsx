@@ -707,7 +707,7 @@ const InterviewRoom = () => {
           <div className="grid gap-6 px-6 py-6 lg:px-8 lg:py-8">
             <div className="interview-reveal max-w-3xl">
               <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Interview in progress</p>
-              <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-4xl">
+              <h1 className="app-page-title mt-3 text-3xl text-zinc-950 sm:text-4xl">
                 {session?.candidate?.jobTitle} interview
               </h1>
               <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-zinc-600 sm:text-base">
@@ -757,7 +757,7 @@ const InterviewRoom = () => {
                     <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-zinc-500">
                       {question.type} · Question {question.sequence}
                     </div>
-                    <h2 className="mt-4 text-xl font-extrabold tracking-tight text-zinc-950">{question.prompt}</h2>
+                    <h2 className="app-section-title-sm mt-4 text-xl text-zinc-950">{question.prompt}</h2>
                   </div>
 
                   <div
@@ -936,7 +936,7 @@ const InterviewRoom = () => {
             <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-zinc-500">
               Secure interview lock
             </div>
-            <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-zinc-950">Share your screen to reveal questions</h2>
+            <h2 className="app-section-title mt-4 text-2xl text-zinc-950">Share your screen to reveal questions</h2>
             {mediaError && (
               <div className="mt-4 rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
                 {mediaError}
@@ -970,7 +970,7 @@ const InterviewRoom = () => {
             <div className="inline-flex rounded-full border border-zinc-200 bg-zinc-50 px-3 py-1 text-[11px] font-extrabold uppercase tracking-[0.2em] text-zinc-700">
               Integrity warning
             </div>
-            <h2 className="mt-4 text-2xl font-extrabold tracking-tight text-zinc-950">{warning.title}</h2>
+            <h2 className="app-section-title mt-4 text-2xl text-zinc-950">{warning.title}</h2>
             <p className="mt-3 text-sm font-medium leading-6 text-zinc-600">{warning.message}</p>
             <p className="mt-3 text-sm font-semibold text-zinc-800">Current violations: {violationCount}/2</p>
             <button

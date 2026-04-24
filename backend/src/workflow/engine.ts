@@ -29,19 +29,21 @@ const TRANSITIONS: Record<string, { from: State | State[]; to: State; event: str
     event: 'HR_ACCEPT_INTERVIEW',
   },
   'reject-interview': {
-    from: STATES.INTERVIEW_DONE,
+    from: [
+      STATES.AI_INTERVIEW_SCORED,
+      STATES.INTERVIEW_PENDING,
+      STATES.INTERVIEW_SCHEDULED,
+      STATES.INTERVIEW_CONFIRMED,
+      STATES.INTERVIEW_RESCHEDULE_REQUESTED,
+      STATES.INTERVIEW_DONE,
+    ],
     to: STATES.INTERVIEW_REJECTED,
     event: 'HR_REJECT_INTERVIEW',
   },
   'advance-to-human-interview': {
     from: STATES.AI_INTERVIEW_SCORED,
     to: STATES.INTERVIEW_PENDING,
-    event: 'HR_ADVANCE_TO_HUMAN_INTERVIEW',
-  },
-  'reject-after-ai': {
-    from: STATES.AI_INTERVIEW_SCORED,
-    to: STATES.INTERVIEW_REJECTED,
-    event: 'HR_REJECT_AFTER_AI_INTERVIEW',
+    event: 'HR_ACCEPT_FOR_HUMAN_INTERVIEW',
   },
   'override-auto-screen-pass': {
     from: STATES.CV_REJECTED,
