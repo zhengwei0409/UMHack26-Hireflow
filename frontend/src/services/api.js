@@ -1,4 +1,4 @@
-const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3000/api/v1';
+const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:3001/api/v1';
 
 const getToken = () => localStorage.getItem('hireflow_token');
 
@@ -229,4 +229,93 @@ export const interviews = {
 
 };
 
-export default { auth, jobs, candidates, dashboard, interviews };
+export const investigation = {
+  run: (candidateId, data = {}) =>
+    fetch(`${API_BASE}/candidates/investigate/${candidateId}`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+
+  getResult: (candidateId) =>
+    fetch(`${API_BASE}/candidates/investigation/${candidateId}`, {
+      headers: headers(),
+    }).then(handleResponse),
+};
+
+export const biasAudit = {
+  getMetrics: (jobId = null) => {
+    const query = jobId ? `?${new URLSearchParams({ jobId }).toString()}` : '';
+    return fetch(`${API_BASE}/bias-audit/metrics${query}`, {
+      headers: headers(),
+    }).then(handleResponse);
+  },
+
+  getSnapshots: (jobId = null, limit = 50) => {
+    const params = new URLSearchParams({ limit: String(limit) });
+    if (jobId) params.append('jobId', jobId);
+    return fetch(`${API_BASE}/bias-audit/snapshots?${params.toString()}`, {
+      headers: headers(),
+    }).then(handleResponse);
+  },
+};
+
+export const candidatePortal = {
+  getStatus: (token) =>
+    fetch(`${API_BASE}/portal/${token}`, { headers: headers() }).then(handleResponse),
+};
+
+export const config = {
+  list: () =>
+    fetch(`${API_BASE}/config`, { headers: headers() }).then(handleResponse),
+  update: (data) =>
+    fetch(`${API_BASE}/config`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify(data),
+    }).then(handleResponse),
+};
+
+export const cv = {
+  getText: (candidateId) =>
+    fetch(`${API_BASE}/candidates/${candidateId}/cv-text`, { headers: headers() }).then(handleResponse),
+
+  getHighlights: (candidateId) =>
+    fetch(`${API_BASE}/candidates/${candidateId}/cv-highlights`, { headers: headers() }).then(handleResponse),
+
+  runDeepInvestigation: (candidateId) =>
+    fetch(`${API_BASE}/candidates/deep-investigate/${candidateId}`, {
+      method: 'POST',
+      headers: headers(),
+    }).then(handleResponse),
+
+  sendAnalysisToCandidate: (candidateId, analysis) =>
+    fetch(`${API_BASE}/telegram/send-analysis/${candidateId}`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ analysis }),
+    }).then(handleResponse),
+};
+
+export const telegram = {
+  sendAnalysis: (candidateId, analysis) =>
+    fetch(`${API_BASE}/telegram/send-analysis/${candidateId}`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ analysis }),
+    }).then(handleResponse),
+
+  register: (candidateId, chatId) =>
+    fetch(`${API_BASE}/telegram/register/${candidateId}`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ chatId }),
+    }).then(handleResponse),
+
+  getLink: (candidateId) =>
+    fetch(`${API_BASE}/telegram/link/${candidateId}`, {
+      headers: headers(),
+    }).then(handleResponse),
+};
+
+export default { auth, jobs, candidates, dashboard, interviews, investigation, biasAudit, candidatePortal, cv, config, telegram };

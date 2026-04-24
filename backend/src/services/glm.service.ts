@@ -59,7 +59,390 @@ interface GLMMessage {
   content: string;
 }
 
-function clampScore(score: number) {
+export interface CVHighlight {
+  text: string;
+  type: 'skill' | 'experience' | 'education' | 'project' | 'certification' | 'achievement' | 'tool' | 'other';
+  relevance: 'high' | 'medium' | 'low';
+  context: string;
+  matchedRequirement: string;
+}
+
+export interface HighlightSegment {
+  text: string;
+  type: 'skill' | 'experience' | 'education' | 'project' | 'certification' | 'achievement' | 'tool' | 'other';
+  relevance: 'high' | 'medium' | 'low';
+  context: string;
+  matchedRequirement: string;
+}
+
+export interface EducationEntry {
+  institution: string;
+  degree: string;
+  field?: string;
+  cgpa?: string;
+  startYear?: string;
+  endYear?: string;
+  description?: string;
+}
+
+export interface ExperienceEntry {
+  title: string;
+  organization: string;
+  duration: string;
+  description: string;
+  type: 'leadership' | 'work' | 'internship';
+}
+
+export interface ProjectEntry {
+  name: string;
+  date: string;
+  description: string;
+  technologies: string[];
+  outcome?: string;
+  role?: string;
+}
+
+export interface PaperEntry {
+  title: string;
+  status: string;
+  venue: string;
+  date?: string;
+  description?: string;
+}
+
+export interface SkillEntry {
+  category: string;
+  items: string[];
+  proficiency?: string;
+  relevance?: 'high' | 'medium' | 'low';
+  matchedRequirement?: string;
+}
+
+export interface ProjectEntry {
+  name: string;
+  date: string;
+  description: string;
+  technologies: string[];
+  outcome?: string;
+  role?: string;
+  relevance?: 'high' | 'medium' | 'low';
+  matchedRequirement?: string;
+}
+
+export interface LanguageEntry {
+  language: string;
+  proficiency: string;
+}
+
+export interface EvaluationStep {
+  step: string;
+  analysis: string;
+  evidence: string;
+  confidence: 'high' | 'medium' | 'low';
+  source: 'cv' | 'linkedin' | 'github' | 'combined';
+}
+
+export interface EvaluationSection {
+  methodology: EvaluationStep[];
+  overallScore: number;
+  strengths: string[];
+  weaknesses: string[];
+  recommendation: 'ACCEPT' | 'REVIEW' | 'REJECT';
+  rationale: string;
+}
+
+export interface CompleteCVAnalysis {
+  education: EducationEntry[];
+  experience: ExperienceEntry[];
+  projects: ProjectEntry[];
+  papers: PaperEntry[];
+  skills: SkillEntry[];
+  languages: LanguageEntry[];
+  evaluation: EvaluationSection;
+  links: ExtractedLink[];
+  rawText: string;
+}
+
+export interface ExtractedLink {
+  url: string;
+  platform: 'github' | 'linkedin' | 'portfolio' | 'leetcode' | 'medium' | 'twitter' | 'other';
+  label: string;
+}
+
+export interface CvAnalysis {
+  fullText: string;
+  highlightedSegments: HighlightSegment[];
+  highlights: CVHighlight[];
+  links: ExtractedLink[];
+  skillMatches: { skill: string; matched: boolean; requirement: string }[];
+  summary: string;
+}
+
+async function llmExtractCompleteAnalysis(
+  cvText: string,
+  jobRequirements: string[]
+): Promise<CompleteCVAnalysis> {
+  const requirementsStr = jobRequirements.join(', ');
+
+  const prompt = `You are an expert HR analyst. Analyze this CV comprehensively.
+
+Return JSON with COMPLETE data - include ALL sections from the CV:
+
+{
+  "education": [
+    {"institution": "full name", "degree": "exact degree name", "field": "field of study", "cgpa": "GPA value", "startYear": "year", "endYear": "year or Expected", "description": "any additional details"}
+  ],
+  "experience": [
+    {"title": "exact role title", "organization": "company/org name", "duration": "Sep 2024 - Present", "description": "what they did", "type": "leadership|work|internship"}
+  ],
+  "projects": [
+    {"name": "project name", "date": "month year", "description": "what it does", "technologies": ["tech1", "tech2"], "outcome": "results achieved", "role": "your role if mentioned"}
+  ],
+  "papers": [
+    {"title": "exact paper title", "status": "Published|Under Review|Submitted", "venue": "journal/conference name", "date": "month year", "description": "brief description"}
+  ],
+"skills": [
+    {"category": "Data Science", "items": ["skill1", "skill2"], "proficiency": "if mentioned", "relevance": "high|medium|low"}
+  ],
+  "projects": [
+    {"name": "project name", "date": "month year", "description": "what it does", "technologies": ["tech1", "tech2"], "outcome": "results achieved", "role": "your role if mentioned", "relevance": "high|medium|low", "matchedRequirement": "job requirement it matches"}
+  ],
+  "languages": [
+    {"language": "language name", "proficiency": "Native|Basic|Professional Working"}
+  ],
+  "evaluation": {
+    "methodology": [
+      {"step": "Step 1: Education Analysis", "analysis": "What was analyzed and why", "evidence": "Exact text from CV referencing this", "confidence": "high|medium|low", "source": "cv|linkedin|github|combined"},
+      {"step": "Step 2: Skills Verification", "analysis": "How skills were verified", "evidence": "CV text location", "confidence": "high|medium|low", "source": "cv|linkedin|github|combined"},
+      {"step": "Step 3: Project Experience", "analysis": "What was evaluated", "evidence": "CV text", "confidence": "high|medium|low", "source": "cv"},
+      {"step": "Step 4: Research/Papers", "analysis": "Research experience verified", "evidence": "CV text", "confidence": "high|medium|low", "source": "cv"},
+      {"step": "Step 5: Leadership Potential", "analysis": "Leadership roles assessed", "evidence": "CV text", "confidence": "high|medium|low", "source": "cv"}
+    ],
+    "overallScore": 0-100,
+    "strengths": ["top 5 strengths with evidence from CV"],
+    "weaknesses": ["gaps or areas needing clarification"],
+    "recommendation": "ACCEPT|REVIEW|REJECT",
+    "rationale": "2-3 sentence explanation of recommendation"
+  },
+  "links": [
+    {"url": "complete URL", "platform": "github|linkedin|leetcode", "label": "descriptive label"}
+  ],
+  "rawText": "FULL VERBATIM CV TEXT - copy everything exactly as written"
+}
+
+CRITICAL REQUIREMENTS:
+1. rawText: Copy ENTIRE CV text - every word, every number, every punctuation mark
+2. education: List ALL institutions, degrees, CGPA
+3. projects: Include EVERY project with full description and technologies used
+4. skills: Categorize ALL skills mentioned (programming, frameworks, tools)
+5. evaluation: Each step must reference SPECIFIC evidence text from CV
+6. Confidence based on: high=cv text explicit, medium=implied, low=assumed
+
+CV Text:
+${cvText}
+
+Job Requirements:
+${requirementsStr}`;
+
+  try {
+    const response = await callLLM([{ role: 'user', content: prompt }], 0.3);
+    const parsed = response ? extractJsonFromResponse(response) : null;
+    console.log('[CV ANALYSIS] LLM Response:', JSON.stringify(parsed).slice(0, 500));
+
+    if (parsed) {
+      return {
+        education: parsed.education || [],
+        experience: parsed.experience || [],
+        projects: parsed.projects || [],
+        papers: parsed.papers || [],
+        skills: parsed.skills || [],
+        languages: parsed.languages || [],
+        evaluation: parsed.evaluation || {
+          methodology: [],
+          overallScore: 0,
+          strengths: [],
+          weaknesses: [],
+          recommendation: 'REVIEW',
+          rationale: 'Incomplete analysis'
+        },
+        links: parsed.links || [],
+        rawText: parsed.rawText || cvText,
+      };
+    }
+  } catch (error) {
+    console.error('LLM complete analysis error:', error);
+  }
+
+  console.log('[CV ANALYSIS] LLM failed, using fallback');
+  return parseCvFallback(cvText);
+}
+
+function parseCvFallback(cvText: string): CompleteCVAnalysis {
+  const links: ExtractedLink[] = [];
+  
+  const githubRegex = /github\.com\/([a-zA-Z0-9_-]+)/gi;
+  let match;
+  while ((match = githubRegex.exec(cvText)) !== null) {
+    links.push({ url: `https://github.com/${match[1]}`, platform: 'github', label: `${match[1]}'s GitHub` });
+  }
+  
+  const linkedinRegex = /(?:linkedin\.com\/in\/|www\.linkedin\.com\/in\/)([a-zA-Z0-9_-]+)/gi;
+  while ((match = linkedinRegex.exec(cvText)) !== null) {
+    links.push({ url: `https://www.linkedin.com/in/${match[1]}`, platform: 'linkedin', label: `${match[1]}'s LinkedIn` });
+  }
+
+  return {
+    education: [],
+    experience: [],
+    projects: [],
+    papers: [],
+    skills: [],
+    languages: [],
+    evaluation: {
+      methodology: [
+        {
+          step: 'Text Extraction',
+          analysis: 'Extracted raw text from CV document',
+          evidence: 'CV file parsed successfully',
+          confidence: 'high',
+          source: 'cv'
+        }
+      ],
+      overallScore: 50,
+      strengths: ['Content extracted'],
+      weaknesses: ['Insufficient structured data'],
+      recommendation: 'REVIEW',
+      rationale: 'Manual review required'
+    },
+    links,
+    rawText: cvText,
+  };
+}
+
+export async function extractCompleteCVAnalysis(
+  cvText: string,
+  jobRequirements: unknown[]
+): Promise<CompleteCVAnalysis> {
+  const stringRequirements = (jobRequirements || []).map(String);
+  return llmExtractCompleteAnalysis(cvText, stringRequirements);
+}
+
+function fallbackExtractHighlights(cvText: string, jobRequirements: string[]): {
+  fullText: string;
+  highlightedSegments: HighlightSegment[];
+  links: ExtractedLink[];
+  summary: string;
+} {
+  const links: ExtractedLink[] = [];
+  const urlRegex = /https?:\/\/[^\s]+/gi;
+  const urlMatches = cvText.match(urlRegex) || [];
+
+  const platformPatterns: Record<string, ExtractedLink['platform']> = {
+    github: 'github',
+    linkedin: 'linkedin',
+    leetcode: 'leetcode',
+    medium: 'medium',
+    twitter: 'twitter',
+  };
+
+  for (const url of [...new Set(urlMatches)]) {
+    let platform: ExtractedLink['platform'] = 'other';
+    let label = url;
+
+    for (const [pattern, plat] of Object.entries(platformPatterns)) {
+      if (url.toLowerCase().includes(pattern)) {
+        platform = plat;
+        label = `${plat.charAt(0).toUpperCase() + plat.slice(1)} Profile`;
+        break;
+      }
+    }
+
+    links.push({ url, platform, label });
+  }
+
+  const linkedinRegex = /(?:linkedin\.com\/in\/|linkedin\.com\/pub\/)([a-zA-Z0-9_-]+)/gi;
+  let linkedinMatch: RegExpExecArray | null;
+  while ((linkedinMatch = linkedinRegex.exec(cvText)) !== null) {
+    const username = linkedinMatch[1];
+    if (username) {
+      const cleanUrl = `https://www.linkedin.com/in/${username}`;
+      if (!links.find(l => l.url.includes(username))) {
+        links.push({ url: cleanUrl, platform: 'linkedin', label: 'LinkedIn Profile' });
+      }
+    }
+  }
+
+  const highlightedSegments: HighlightSegment[] = [];
+  const cvTextLower = cvText.toLowerCase();
+  const requirementsLower = jobRequirements.map(r => r.toLowerCase());
+
+  for (const req of requirementsLower) {
+    const reqWords = req.split(/\s+/).filter(w => w.length > 3);
+    for (const word of reqWords) {
+      if (cvTextLower.includes(word)) {
+        const idx = cvTextLower.indexOf(word);
+        const start = Math.max(0, idx - 30);
+        const end = Math.min(cvText.length, idx + word.length + 30);
+        highlightedSegments.push({
+          text: cvText.slice(start, end),
+          type: 'skill',
+          relevance: 'high',
+          context: `Found "${word}" in CV`,
+          matchedRequirement: req,
+        });
+        break;
+      }
+    }
+  }
+
+  return {
+    fullText: cvText,
+    highlightedSegments: highlightedSegments.slice(0, 20),
+    links,
+    summary: highlightedSegments.length > 0
+      ? `Found ${highlightedSegments.length} relevant sections matching job requirements.`
+      : 'Partial match with job requirements.',
+  };
+}
+
+export async function extractCvHighlights(
+  cvText: string,
+  jobRequirements: unknown[]
+): Promise<CvAnalysis> {
+  const stringRequirements: string[] = (jobRequirements || []).map(String);
+  const completeAnalysis = await llmExtractCompleteAnalysis(cvText, stringRequirements);
+
+  if (completeAnalysis.education.length > 0 || completeAnalysis.projects.length > 0 || completeAnalysis.skills.length > 0) {
+    const allSkills = completeAnalysis.skills.flatMap(s => s.items);
+    const skillMatches = stringRequirements.map(req => ({
+      skill: req,
+      matched: allSkills.some(s => s.toLowerCase().includes(req.toLowerCase())),
+      requirement: req,
+    }));
+
+    return {
+      fullText: completeAnalysis.rawText,
+      highlightedSegments: [],
+      highlights: [],
+      links: completeAnalysis.links,
+      skillMatches,
+      summary: completeAnalysis.evaluation.rationale,
+    };
+  }
+
+  const fallback = fallbackExtractHighlights(cvText, stringRequirements);
+
+  return {
+    fullText: fallback.fullText,
+    highlightedSegments: fallback.highlightedSegments,
+    highlights: fallback.highlightedSegments,
+    links: fallback.links,
+skillMatches: [],
+    summary: fallback.summary,
+  };
+}
+
+export function clampScore(score: number) {
   return Math.min(100, Math.max(0, Math.round(score)));
 }
 
@@ -166,6 +549,8 @@ async function loadTextFromCv(cvFilePath: string): Promise<string> {
   }
   return fs.readFileSync(cvFilePath, 'utf-8');
 }
+
+export { loadTextFromCv };
 
 function fallbackCvAnalysis(cvText: string, jobDescription: string): GLMAnalysis {
   const jobWords = Array.from(new Set(normalizeWords(jobDescription)));
@@ -555,3 +940,4 @@ Code submission: ${input.codeSubmission ?? 'N/A'}`;
 
   return fallbackInterviewAnswerScore(input);
 }
+

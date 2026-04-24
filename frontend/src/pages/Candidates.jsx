@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { buttonBaseClassName } from '../styles/buttonStyles';
+import InDepthCVAnalysisModal from '../components/InDepthCVAnalysisModal';
 
 const selectClassName =
   'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
@@ -278,10 +279,9 @@ const Candidates = () => {
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [filters, setFilters] = useState(() => ({ jobId: '', status: searchParams.get('status') || '' }));
-  const [collapsedLanes, setCollapsedLanes] = useState({
-    'rejected-closed': true,
-  });
+  const [filters, setFilters] = useState({ jobId: '', status: searchParams.get('status') || '' });
+  const [analysisCandidate, setAnalysisCandidate] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -335,33 +335,33 @@ const Candidates = () => {
     };
   }, [candidates]);
 
-  const candidateLanes = useMemo(() => {
-    const usedStatuses = new Set(reviewLanes.flatMap((lane) => lane.statuses));
-    const lanes = reviewLanes
-      .map((lane) => ({
-        ...lane,
-        candidates: candidates.filter((candidate) => lane.statuses.includes(String(candidate.status || '').toUpperCase())),
-      }))
-      .filter((lane) => lane.candidates.length > 0);
-
-    const otherCandidates = candidates.filter((candidate) => !usedStatuses.has(String(candidate.status || '').toUpperCase()));
-    if (otherCandidates.length > 0) {
-      lanes.push({
-        key: 'other',
-        title: 'Other Status',
-        description: 'Candidates with other workflow states.',
-        candidates: otherCandidates,
-      });
-    }
-
-    return lanes;
-  }, [candidates]);
-
   const toggleLane = (laneKey) => {
     setCollapsedLanes((current) => ({
       ...current,
       [laneKey]: !current[laneKey],
     }));
+  };
+
+  const formatScore = (candidate) => {
+    const score = getNumericScore(candidate);
+    if (score !== null) {
+      return `${Math.round(score)}%`;
+    }
+    return '-';
+  };
+
+  const getStatusTone = (status) => {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized.includes('REJECT') || normalized === 'FAILED') {
+      return 'border-red-200 bg-red-50 text-red-600';
+    }
+    if (normalized === 'HIRED' || normalized === 'ONBOARDING') {
+      return 'border-emerald-200 bg-emerald-50 text-emerald-700';
+    }
+    if (normalized.includes('INTERVIEW_DONE') || normalized === 'AI_INTERVIEW_SCORED' || normalized.includes('OFFER')) {
+      return 'border-blue-200 bg-blue-50 text-blue-700';
+    }
+    return 'border-zinc-200 bg-zinc-50 text-zinc-700';
   };
 
   return (
@@ -445,49 +445,55 @@ const Candidates = () => {
         ) : (
           <section>
             <div className="grid gap-4">
-                {candidateLanes.map((lane, laneIndex) => (
-                  <section
-                    key={lane.key}
-                    className="candidate-lane-enter overflow-hidden rounded-lg border border-zinc-200 bg-white"
-                    style={{ animationDelay: `${120 + laneIndex * 80}ms` }}
-                  >
-                    <div className="flex flex-col gap-2 border-b border-zinc-100 bg-zinc-50 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <h3 className="text-lg font-black tracking-tight text-zinc-950">{lane.title}</h3>
-                        <span className={sectionCountClassName}>{lane.candidates.length}</span>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <button
-                          type="button"
-                          className={collapseToggleClassName}
-                          onClick={() => toggleLane(lane.key)}
-                          aria-expanded={!collapsedLanes[lane.key]}
-                          aria-label={collapsedLanes[lane.key] ? `Expand ${lane.title}` : `Collapse ${lane.title}`}
-                        >
-                          <CollapseIcon collapsed={collapsedLanes[lane.key]} />
-                        </button>
-                      </div>
+              {candidateLanes.map((lane, laneIndex) => (
+                <section
+                  key={lane.key}
+                  className="candidate-lane-enter overflow-hidden rounded-lg border border-zinc-200 bg-white"
+                  style={{ animationDelay: `${120 + laneIndex * 80}ms` }}
+                >
+                  <div className="flex flex-col gap-2 border-b border-zinc-100 bg-zinc-50 px-5 py-4 sm:flex-row sm:items-end sm:justify-between">
+                    <div className="flex flex-wrap items-center gap-3">
+                      <h3 className="text-lg font-black tracking-tight text-zinc-950">{lane.title}</h3>
+                      <span className={sectionCountClassName}>{lane.candidates.length}</span>
                     </div>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <button
+                        type="button"
+                        className={collapseToggleClassName}
+                        onClick={() => toggleLane(lane.key)}
+                        aria-expanded={!collapsedLanes[lane.key]}
+                        aria-label={collapsedLanes[lane.key] ? `Expand ${lane.title}` : `Collapse ${lane.title}`}
+                      >
+                        <CollapseIcon collapsed={collapsedLanes[lane.key]} />
+                      </button>
+                    </div>
+                  </div>
 
-                    {collapsedLanes[lane.key] ? null : (
-                      <div className="divide-y divide-zinc-100">
-                        {lane.candidates.map((candidate, index) => (
-                          <CandidateRow
-                            key={candidate.id}
-                            candidate={candidate}
-                            index={index}
-                            hideRank={lane.key === 'rejected-closed'}
-                            hideRadar={lane.key === 'rejected-closed'}
-                          />
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                ))}
+                  {collapsedLanes[lane.key] ? null : (
+                    <div className="divide-y divide-zinc-100">
+                      {lane.candidates.map((candidate, index) => (
+                        <CandidateRow
+                          key={candidate.id}
+                          candidate={candidate}
+                          index={index}
+                          hideRank={lane.key === 'rejected-closed'}
+                          hideRadar={lane.key === 'rejected-closed'}
+                        />
+                      ))}
+                    </div>
+                  )}
+                </section>
+              ))}
             </div>
           </section>
         )}
       </div>
+
+      <InDepthCVAnalysisModal
+        candidateId={analysisCandidate?.id}
+        isOpen={showAnalysis}
+        onClose={() => setShowAnalysis(false)}
+      />
     </div>
   );
 };

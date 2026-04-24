@@ -32,11 +32,13 @@ const router = Router();
 // Public — candidate submits application
 router.post('/apply', upload.single('cvFile'), candidateController.applyToJob);
 
+// Public — candidate downloads their own CV (using candidate ID as token)
+router.get('/:id/cv', candidateController.downloadCv);
+
 // Protected — HR only
 router.get('/', requireAuth, candidateController.listCandidates);
 router.get('/:id', requireAuth, candidateController.getCandidate);
 router.delete('/:id', requireAuth, candidateController.deleteCandidate);
-router.get('/:id/cv', requireAuth, candidateController.downloadCv);
 router.get('/:id/history', requireAuth, workflowController.getHistory);
 router.get('/:id/ai-report', requireAuth, interviewController.getCandidateAiReport);
 

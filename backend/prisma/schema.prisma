@@ -23,50 +23,56 @@ model Job {
   requirements        Json               @default("[]")
   location            String
   closingDate         DateTime
-  autoScreenThreshold Int                @default(60)
-  shortlistSize       Int                @default(10)
   status              JobStatus          @default(OPEN)
   createdAt           DateTime           @default(now())
+  autoScreenThreshold Int                @default(60)
+  shortlistSize       Int                @default(10)
+  vertical            VerticalType?      @default(GENERIC)
   candidates          Candidate[]
   interviewSessions   InterviewSession[]
 }
 
 model Candidate {
-  id                    String          @id @default(uuid())
-  fullName              String
-  email                 String
-  phone                 String?
-  cvFilePath            String
-  jobId                 String
-  job                   Job             @relation(fields: [jobId], references: [id])
-  status                CandidateStatus @default(APPLIED)
-  glmAnalysis           Json?
-  glmScore              Int?
-  autoScreenDecision    ScreeningDecision?
-  autoScreenNotes       Json?
-  interviewDate         String?
-  interviewTime         String?
-  interviewLocation     String?
-  interviewMeetingLink  String?
-  aiInterviewScore      Float?
-  aiInterviewRank       Int?
-  isShortlisted         Boolean         @default(false)
-  createdAt             DateTime        @default(now())
-  updatedAt             DateTime        @updatedAt
-  history               StatusHistory[]
-  interviewSessions     InterviewSession[]
+  id                   String             @id @default(uuid())
+  fullName             String
+  email                String
+  phone                String?
+  cvFilePath           String
+  jobId                String
+  status               CandidateStatus    @default(APPLIED)
+  glmAnalysis          Json?
+  glmScore             Int?
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  interviewDate        String?
+  interviewLocation    String?
+  interviewMeetingLink String?
+  interviewTime        String?
+  aiInterviewRank      Int?
+  aiInterviewScore     Float?
+  autoScreenDecision   ScreeningDecision?
+  autoScreenNotes      Json?
+  isShortlisted        Boolean            @default(false)
+  investigationResult  Json?
+  pendingQuestions     Json?
+  telegramChatId       String?
+  telegramToken        String?
+  job                  Job                @relation(fields: [jobId], references: [id])
+  interviewSessions    InterviewSession[]
+  history              StatusHistory[]
+  telegramSession      TelegramSession?
 }
 
 model StatusHistory {
   id          String    @id @default(uuid())
   candidateId String
-  candidate   Candidate @relation(fields: [candidateId], references: [id])
   fromStatus  String?
   toStatus    String
   event       String
   triggeredBy String?
   metadata    Json?
   createdAt   DateTime  @default(now())
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
 }
 
 model InterviewSession {
@@ -85,17 +91,16 @@ model InterviewSession {
   metadata       Json?
   createdAt      DateTime               @default(now())
   updatedAt      DateTime               @updatedAt
+  answers        CandidateAnswer[]
+  questions      InterviewQuestion[]
   candidate      Candidate              @relation(fields: [candidateId], references: [id])
   job            Job                    @relation(fields: [jobId], references: [id])
-  questions      InterviewQuestion[]
-  answers        CandidateAnswer[]
   proctorEvents  ProctorEvent[]
 }
 
 model InterviewQuestion {
   id             String                @id @default(uuid())
   sessionId      String
-  session        InterviewSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   type           InterviewQuestionType
   sequence       Int
   prompt         String
@@ -103,6 +108,7 @@ model InterviewQuestion {
   metadata       Json?
   createdAt      DateTime              @default(now())
   answers        CandidateAnswer[]
+  session        InterviewSession      @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, sequence])
 }
@@ -120,8 +126,8 @@ model CandidateAnswer {
   metadata            Json?
   createdAt           DateTime          @default(now())
   updatedAt           DateTime          @updatedAt
-  session             InterviewSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   question            InterviewQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  session             InterviewSession  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@unique([sessionId, questionId])
 }
@@ -135,6 +141,40 @@ model ProctorEvent {
   metadata   Json?
   createdAt  DateTime         @default(now())
   session    InterviewSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+}
+
+model TelegramSession {
+  id          String    @id @default(uuid())
+  candidateId String    @unique
+  chatId      String?
+  state       String    @default("AWAITING_QUESTIONS")
+  questions   Json      @default("[]")
+  responses   Json      @default("[]")
+  scoreAdjust Int       @default(0)
+  initiatedBy String    @default("SYSTEM")
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  candidate   Candidate @relation(fields: [candidateId], references: [id])
+}
+
+model BiasAuditSnapshot {
+  id             String            @id @default(uuid())
+  candidateId    String
+  jobId          String
+  decision       ScreeningDecision
+  score          Int
+  threshold      Int
+  inferredGender String?
+  nameOrigin     String?
+  universityTier Int?
+  triggerType    String
+  createdAt      DateTime          @default(now())
+}
+
+model SystemConfig {
+  id    String @id @default(uuid())
+  key   String @unique
+  value String
 }
 
 enum Role {
@@ -153,10 +193,6 @@ enum CandidateStatus {
   CV_PARSE_FAILED
   CV_UNDER_REVIEW
   CV_REJECTED
-  AI_INTERVIEW_INVITED
-  AI_INTERVIEW_IN_PROGRESS
-  AI_INTERVIEW_COMPLETED
-  AI_INTERVIEW_SCORED
   INTERVIEW_PENDING
   INTERVIEW_SCHEDULED
   INTERVIEW_INVITE_FAILED
@@ -169,6 +205,10 @@ enum CandidateStatus {
   FAILED
   INTERVIEW_CONFIRMED
   INTERVIEW_RESCHEDULE_REQUESTED
+  AI_INTERVIEW_INVITED
+  AI_INTERVIEW_IN_PROGRESS
+  AI_INTERVIEW_COMPLETED
+  AI_INTERVIEW_SCORED
 }
 
 enum ScreeningDecision {
@@ -188,4 +228,10 @@ enum InterviewQuestionType {
   DSA
   MCQ
   BEHAVIORAL
+}
+
+enum VerticalType {
+  GENERIC
+  HEALTHCARE
+  CONSTRUCTION
 }

@@ -27,3 +27,11 @@ export function requireAuth(req: Request, res: Response, next: NextFunction) {
     });
   }
 }
+
+export function verifyToken(token: string): { userId: string; role: string } | null {
+  try {
+    return jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
+  } catch {
+    return null;
+  }
+}

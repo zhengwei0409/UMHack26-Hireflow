@@ -1,14 +1,88 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
+import React, { useEffect, useMemo, useState, useRef } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import {
   buttonPrimaryClassName,
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
+import InDepthCVAnalysisModal from '../components/InDepthCVAnalysisModal';
 
-const primaryButtonClassName = `${buttonPrimaryClassName} !text-white visited:!text-white`;
-const secondaryButtonClassName = buttonSecondaryClassName;
-const sectionCountClassName = 'inline-flex min-h-7 items-center rounded-full bg-zinc-100 px-2.5 text-xs font-black tracking-[0.08em] text-zinc-600';
+const ActionsDropdown = ({ position, onAction }) => {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handleClick = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, []);
+
+  const actions = [
+    { key: 'view', label: 'View Applicants', to: `/candidates?jobId=${position.id}` },
+    { key: 'shortlist', label: 'View Shortlist', to: `/candidates?jobId=${position.id}&status=HIRED` }, // Assuming shortlist relates to hired or similar for demo
+    { key: 'edit', label: 'Edit Job', to: `/jobs/${position.id}` },
+    { key: 'close', label: 'Close Job', action: async () => {
+      if (confirm(`Close "${position.title}"?`)) {
+        await api.jobs.update(position.id, { status: 'CLOSED' });
+        onAction('refresh');
+      }
+    }},
+  ];
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        onClick={() => setOpen(!open)}
+        className="rounded-md p-2 text-zinc-500 hover:bg-zinc-100 hover:text-black"
+        aria-label="Actions"
+      >
+        <svg viewBox="0 0 20 20" className="h-5 w-5" aria-hidden="true">
+          <path fill="currentColor" d="M10 4a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm0 4.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Zm0 4.5a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3Z" />
+        </svg>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-10 mt-1 w-48 rounded-md border border-zinc-200 bg-white py-1 shadow-lg">
+          {actions.map((a) =>
+            a.to ? (
+              <Link
+                key={a.key}
+                to={a.to}
+                onClick={() => setOpen(false)}
+                className="block px-4 py-2 text-sm text-zinc-700 hover:bg-zinc-50"
+              >
+                {a.label}
+              </Link>
+            ) : (
+              <button
+                key={a.key}
+                onClick={() => { setOpen(false); a.action?.(); }}
+                className="w-full px-4 py-2 text-left text-sm text-zinc-700 hover:bg-zinc-50"
+              >
+                {a.label}
+              </button>
+            )
+          )}
+        </div>
+      )}
+    </div>
+  );
+};
+
+const formatPostedDate = (value) => {
+  if (!value) return 'Recently';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Invalid Date';
+
+  const diff = Date.now() - date.getTime();
+  const days = Math.round(diff / (1000 * 60 * 60 * 24));
+
+  if (days < 1) return 'Today';
+  if (days === 1) return '1 day ago';
+  return `${days} days ago`;
+};
 
 const priorityConfig = {
   INTERVIEW_RESCHEDULE_REQUESTED: {
@@ -223,43 +297,40 @@ const Dashboard = () => {
   const [candidates, setCandidates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [filters, setFilters] = useState({ jobId: '', status: '' });
+  const [collapsedLanes, setCollapsedLanes] = useState({
+    'rejected-closed': true,
+  });
+  const [analysisCandidate, setAnalysisCandidate] = useState(null);
+  const [showAnalysis, setShowAnalysis] = useState(false);
+  const [viewMode, setViewMode] = useState('table'); // 'table' or 'grid'
 
   useEffect(() => {
-    let cancelled = false;
-
-    const loadDashboard = async () => {
-      setLoading(true);
-      setError('');
-
-      try {
-        const [dashboardRes, jobsRes, candidatesRes] = await Promise.all([
-          api.dashboard.get(),
-          api.jobs.list({ limit: 100 }),
-          api.candidates.list({ limit: 200 }),
-        ]);
-
-        if (cancelled) return;
-
-        setDashboardData(dashboardRes.data);
-        setJobs(jobsRes.data.items || []);
-        setCandidates(candidatesRes.data.items || []);
-      } catch (err) {
-        if (!cancelled) {
-          setError(err.message || 'Unable to load dashboard.');
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadDashboard();
-
-    return () => {
-      cancelled = true;
-    };
+    loadData();
   }, []);
+
+  const loadData = async () => {
+    setLoading(true);
+    setError('');
+    try {
+      const [dashboardRes, jobsRes, candidatesRes] = await Promise.all([
+        api.dashboard.get(),
+        api.jobs.list({ limit: 100 }),
+        api.candidates.list({ limit: 200 }),
+      ]);
+      setDashboardData(dashboardRes.data);
+      setJobs(jobsRes.data.items || []);
+      setCandidates(candidatesRes.data.items || []);
+    } catch (err) {
+      setError(err.message || 'Unable to load dashboard.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAction = (action) => {
+    if (action === 'refresh') loadData();
+  };
 
   const metrics = dashboardData?.metrics ?? {
     openRoles: 0,
@@ -368,6 +439,13 @@ const Dashboard = () => {
     [interviewFollowUps.length, metrics.nextInterviews, priorityQueue.length, roleRisks.length, todayApplicants],
   );
 
+  const progressTone = (status) => {
+    const normalized = String(status || '').toUpperCase();
+    if (normalized === 'CLOSED') return 'bg-zinc-500';
+    if (normalized === 'OPEN') return 'bg-emerald-500';
+    return 'bg-zinc-950';
+  };
+
   return (
     <div className="app-ambient-page min-h-full bg-[#f5f5f5] px-4 py-5 text-zinc-950 sm:px-6 lg:px-8">
       <div className="mx-auto flex w-full max-w-7xl flex-col gap-5">
@@ -453,13 +531,13 @@ const Dashboard = () => {
                   <h2 className="app-section-title-sm text-lg text-zinc-950">Quick actions</h2>
                 </div>
                 <div className="mt-4 grid gap-3">
-                  <Link to="/candidates?status=AI_INTERVIEW_SCORED" className={secondaryButtonClassName}>
+                  <Link to="/candidates?status=AI_INTERVIEW_SCORED" className={buttonSecondaryClassName}>
                     Review AI scored
                   </Link>
-                  <Link to="/candidates?status=INTERVIEW_DONE" className={secondaryButtonClassName}>
+                  <Link to="/candidates?status=INTERVIEW_DONE" className={buttonSecondaryClassName}>
                     Review HR decisions
                   </Link>
-                  <Link to="/jobs?create=1" className={primaryButtonClassName}>
+                  <Link to="/jobs?create=1" className={buttonPrimaryClassName}>
                     Create job
                   </Link>
                 </div>

@@ -7,6 +7,7 @@ import {
   buttonPrimaryClassName,
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
+import CvEvaluationModal from '../components/CvEvaluationModal';
 
 const STATUS_ACTIONS = {
   CV_UNDER_REVIEW: [
@@ -356,6 +357,7 @@ const CandidateDetail = () => {
   });
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleData, setScheduleData] = useState({ date: '', time: '', location: '', meetingLink: '' });
+  const [showAiAnalysisModal, setShowAiAnalysisModal] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -565,6 +567,22 @@ const CandidateDetail = () => {
               </p>
             </div>
 
+            <div className="flex items-start justify-start lg:justify-end">
+              <a
+                href={`${import.meta.env.VITE_API_BASE || 'http://localhost:3001/api/v1'}/candidates/${id}/cv`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
+              >
+                Download CV
+              </a>
+              <button
+                onClick={() => setShowAiAnalysisModal(true)}
+                className="inline-flex min-h-11 items-center justify-center rounded-md bg-black px-4 text-sm font-extrabold text-white transition hover:bg-zinc-800"
+              >
+                Show AI Analysis
+              </button>
+            </div>
           </div>
 
           <div className="grid gap-px border-t border-zinc-200 bg-zinc-200 sm:grid-cols-2 xl:grid-cols-4">
@@ -796,7 +814,7 @@ const CandidateDetail = () => {
               </div>
 
               <a
-                href={`${import.meta.env.VITE_API_BASE || 'http://localhost:3000/api/v1'}/candidates/${id}/cv`}
+                href={`${import.meta.env.VITE_API_BASE || 'http://localhost:3001/api/v1'}/candidates/${id}/cv`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className={`${buttonSecondaryClassName} w-full`}
@@ -912,6 +930,12 @@ const CandidateDetail = () => {
             </div>
           </div>
         )}
+
+        <CvEvaluationModal
+          candidateId={id}
+          isOpen={showAiAnalysisModal}
+          onClose={() => setShowAiAnalysisModal(false)}
+        />
       </div>
     </div>
   );

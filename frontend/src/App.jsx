@@ -14,6 +14,10 @@ import InterviewResponse from './pages/InterviewResponse';
 import InterviewIntro from './pages/InterviewIntro';
 import InterviewRoom from './pages/InterviewRoom';
 import InterviewComplete from './pages/InterviewComplete';
+import RankedShortlist from './pages/RankedShortlist';
+import BiasAuditDashboard from './pages/BiasAuditDashboard';
+import CandidatePortal from './pages/CandidatePortal';
+import Settings from './pages/Settings';
 
 const AuthContext = createContext(null);
 
@@ -106,6 +110,10 @@ function App() {
             <Route path="jobs/:id" element={<JobDetail />} />
             <Route path="candidates" element={<Candidates />} />
             <Route path="candidates/:id" element={<CandidateDetail />} />
+            <Route path="bias-audit" element={<BiasAuditDashboard />} />
+            <Route path="ranked-shortlist" element={<RankedShortlist />} />
+            <Route path="portal/:token" element={<CandidatePortal />} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
       </BrowserRouter>

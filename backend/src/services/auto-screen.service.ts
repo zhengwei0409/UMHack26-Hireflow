@@ -3,10 +3,21 @@ import { prisma } from '../config/prisma';
 import { parseCV } from './glm.service';
 import { STATES } from '../workflow/states';
 import { transitionCandidateStatus } from './workflow-state.service';
+import { investigateCandidate } from './investigation.service';
+import { checkForBiasFlags } from './bias-audit.service';
 
 const REVIEW_MARGIN = 10;
 
 export type AutoScreenDecision = 'PASS' | 'REVIEW' | 'REJECT';
+
+export interface AutoScreenResult {
+  candidate: any;
+  analysis: any;
+  threshold: number;
+  decision: AutoScreenDecision;
+  investigationResult?: any;
+  biasFlag?: { flagged: boolean; reason: string | null };
+}
 
 function formatRequirements(requirements: unknown) {
   return Array.isArray(requirements) ? requirements.join(', ') : String(requirements ?? '');
@@ -34,7 +45,7 @@ export function determineAutoScreenDecision(score: number, threshold: number): A
   return 'REJECT';
 }
 
-export async function runAutoScreen(candidateId: string) {
+export async function runAutoScreen(candidateId: string, runInvestigation = false): Promise<AutoScreenResult> {
   const candidate = await prisma.candidate.findUnique({
     where: { id: candidateId },
     include: { job: true },
@@ -47,11 +58,46 @@ export async function runAutoScreen(candidateId: string) {
   const jobDescription = getJobDescription(candidate);
   const analysis = await parseCV(candidate.cvFilePath, jobDescription);
   const threshold = candidate.job.autoScreenThreshold;
-  const decision = determineAutoScreenDecision(analysis.score, threshold);
+  let decision = determineAutoScreenDecision(analysis.score, threshold);
+
+  let investigationResult = null;
+  if (runInvestigation) {
+    try {
+      investigationResult = await investigateCandidate(candidateId);
+      if (investigationResult.recommendation === 'REJECT') {
+        decision = 'REJECT';
+      } else if (investigationResult.recommendation === 'REVIEW' && decision === 'PASS') {
+        decision = 'REVIEW';
+      }
+    } catch (error) {
+      console.error('Investigation failed:', error);
+    }
+  }
+
+  let biasFlag;
+  try {
+    biasFlag = await checkForBiasFlags(
+      candidateId,
+      candidate.jobId,
+      analysis.score,
+      threshold,
+      decision,
+      candidate.cvFilePath,
+      candidate.fullName
+    );
+  } catch (error) {
+    console.error('Bias audit check failed:', error);
+    biasFlag = { flagged: false, reason: null };
+  }
+
   const notes = {
     threshold,
     scoreDelta: analysis.score - threshold,
     recommendation: analysis.recommendation,
+    investigationScore: investigationResult?.overallScore || null,
+    investigationRecommendation: investigationResult?.recommendation || null,
+    biasFlag: biasFlag.flagged,
+    biasReason: biasFlag.reason,
   } satisfies Prisma.JsonObject;
 
   await prisma.$transaction(async (tx) => {
@@ -75,6 +121,8 @@ export async function runAutoScreen(candidateId: string) {
         score: analysis.score,
         threshold,
         decision,
+        investigationScore: investigationResult?.overallScore,
+        biasFlag: biasFlag.flagged,
       } as Prisma.InputJsonValue,
       tx,
     });
@@ -85,5 +133,7 @@ export async function runAutoScreen(candidateId: string) {
     analysis,
     threshold,
     decision,
+    investigationResult,
+    biasFlag,
   };
 }

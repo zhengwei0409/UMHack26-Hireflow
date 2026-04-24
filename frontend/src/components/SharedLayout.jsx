@@ -31,7 +31,35 @@ const navItems = [
       </svg>
     ),
   },
-];
+  {
+    to: '/shortlist',
+    label: 'Ranked Shortlist',
+    icon: (
+      <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+        <path fill="currentColor" d="M10 2l2.4 4.8L18 7.6l-4 3.9.9 5.5L10 14.5l-4.9 2.5.9-5.5-4-3.9 5.6-.8L10 2Z" />
+      </svg>
+    ),
+  },
+  {
+    to: '/bias-audit',
+    label: 'Bias Audit',
+    icon: (
+      <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+        <path fill="currentColor" d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12zm-1-5h2v4H9v-4zm0-6h2v2H9V5z" />
+      </svg>
+    ),
+  },
+  {
+    to: '/settings',
+    label: 'Settings',
+    icon: (
+      <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+        <path fill="currentColor" fillRule="evenodd" d="M11.49 3.17c-.38-1.56-2.6-1.56-2.98 0a1.532 1.532 0 01-2.286.948c-1.372-.836-2.942.734-2.106 2.106.54.886.061 2.042-.947 2.287-1.561.379-1.561 2.6 0 2.978a1.532 1.532 0 01.947 2.287c-.836 1.372.734 2.942 2.106 2.106a1.533 1.533 0 012.287.947c.379 1.561 2.6 1.561 2.978 0a1.533 1.533 0 012.287-.947c1.372.836 2.942-.734 2.106-2.106a1.533 1.533 0 01.947-2.287c1.561-.379 1.561-2.6 0-2.978a1.532 1.532 0 01-.947-2.287c.836-1.372-.734-2.942-2.106-2.106a1.532 1.532 0 01-2.287-.947zM10 13a3 3 0 100-6 3 3 0 000 6z" clipRule="evenodd" />
+      </svg>
+    ),
+  },
+  >>>>>>> Stashed changes
+  ];
 
 const getInitial = (user) => (user?.name || user?.email || 'HF').slice(0, 1).toUpperCase();
 
