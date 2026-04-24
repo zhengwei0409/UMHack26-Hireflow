@@ -1,22 +1,14 @@
-# Dependencies
-node_modules/
-
-# Build
-frontend/dist/
-backend/dist/
-
-# Environment
+__pycache__/
+*.pyc
+*.pyo
+.venv/
+*.egg-info/
+.eggs/
+dist/
+build/
+.pytest_cache/
+.mypy_cache/
+uv.lock
 .env
-.env.local
-*.env
-
-# Logs
-*.log
-npm-debug.log*
-
-# OS
+transcripts/*.json
 .DS_Store
-Thumbs.db
-
-# Uploads
-uploads/
