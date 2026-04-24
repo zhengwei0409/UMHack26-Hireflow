@@ -70,7 +70,7 @@ const InterviewResponse = ({ type }) => {
     return (
       <Shell>
         <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Processing</p>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950">Processing your response</h1>
+        <h1 className="app-page-title mt-3 text-3xl text-zinc-950">Processing your response</h1>
         <p className="mt-4 text-sm font-medium leading-7 text-zinc-600">
           Please wait a moment while we update the interview response.
         </p>
@@ -85,7 +85,7 @@ const InterviewResponse = ({ type }) => {
           !
         </div>
         <p className="mt-6 text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Unable to process</p>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950">We could not complete this request</h1>
+        <h1 className="app-page-title mt-3 text-3xl text-zinc-950">We could not complete this request</h1>
         <p className="mt-4 text-sm font-medium leading-7 text-zinc-600">{error}</p>
         <p className="mt-3 text-sm font-medium leading-7 text-zinc-600">
           Please contact HR directly or try again later.
@@ -103,7 +103,7 @@ const InterviewResponse = ({ type }) => {
         <p className="mt-6 text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">
           {type === 'confirm' ? 'Interview confirmed' : 'Reschedule received'}
         </p>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950">
+        <h1 className="app-page-title mt-3 text-3xl text-zinc-950">
           {type === 'confirm' ? 'Interview confirmed' : 'Reschedule request submitted'}
         </h1>
         <p className="mt-4 text-sm font-medium leading-7 text-zinc-600">
@@ -124,7 +124,7 @@ const InterviewResponse = ({ type }) => {
     return (
       <Shell>
         <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Interview timing</p>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950">Request a reschedule</h1>
+        <h1 className="app-page-title mt-3 text-3xl text-zinc-950">Request a reschedule</h1>
         <p className="mt-4 text-sm font-medium leading-7 text-zinc-600">
           If the proposed interview time does not work, you can send a reschedule request to the HR team.
         </p>
@@ -152,7 +152,7 @@ const InterviewResponse = ({ type }) => {
     return (
       <Shell>
         <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">Interview timing</p>
-        <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-zinc-950">Request a reschedule</h1>
+        <h1 className="app-page-title mt-3 text-3xl text-zinc-950">Request a reschedule</h1>
         <p className="mt-4 text-sm font-medium leading-7 text-zinc-600">
           Adding a short reason helps HR understand the context, but it is optional.
         </p>

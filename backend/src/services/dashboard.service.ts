@@ -1,14 +1,24 @@
+import { CandidateStatus } from '@prisma/client';
 import { prisma } from '../config/prisma';
 import { syncExpiredJobs } from './job.service';
 
 export async function getDashboardData() {
   await syncExpiredJobs();
 
+  const hrDecisionStatuses: CandidateStatus[] = [
+    'AI_INTERVIEW_SCORED',
+    'INTERVIEW_PENDING',
+    'INTERVIEW_SCHEDULED',
+    'INTERVIEW_CONFIRMED',
+    'INTERVIEW_RESCHEDULE_REQUESTED',
+    'INTERVIEW_DONE',
+  ];
+
   const [openRoles, totalApplicants, screenedResumes, nextInterviews, aiScored, shortlisted] = await Promise.all([
     prisma.job.count({ where: { status: 'OPEN' } }),
     prisma.candidate.count({ where: { job: { status: 'OPEN' } } }),
     prisma.candidate.count({ where: { job: { status: 'OPEN' }, NOT: { status: 'APPLIED' } } }),
-    prisma.candidate.count({ where: { job: { status: 'OPEN' }, status: { in: ['INTERVIEW_PENDING', 'INTERVIEW_SCHEDULED'] } } }),
+    prisma.candidate.count({ where: { job: { status: 'OPEN' }, status: { in: hrDecisionStatuses } } }),
     prisma.candidate.count({ where: { job: { status: 'OPEN' }, status: 'AI_INTERVIEW_SCORED' } }),
     prisma.candidate.count({ where: { job: { status: 'OPEN' }, isShortlisted: true } }),
   ]);

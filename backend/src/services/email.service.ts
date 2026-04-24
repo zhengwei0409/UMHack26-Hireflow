@@ -66,27 +66,6 @@ async function sendEmail(options: EmailOptions): Promise<boolean> {
   }
 }
 
-export async function sendInterviewInvite(
-  candidate: { fullName: string; email: string; candidateId?: string },
-  job: { title: string; candidateId?: string },
-  interviewDetails: { date: string; time: string; location: string; meetingLink?: string }
-): Promise<boolean> {
-  const subject = `Interview Invitation - ${job.title} Position`;
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Dear ${candidate.fullName},</h2>
-      <p>Thank you for applying for the <strong>${job.title}</strong> position. We were impressed with your application and would like to invite you for an interview.</p>
-      
-      <p>Our HR team will contact you shortly to schedule the interview date and time.</p>
-      
-      <p>Best regards,<br/>${COMPANY_NAME} HR Team</p>
-    </div>
-  `;
-
-  return sendEmail({ to: candidate.email, subject, html });
-}
-
 export async function sendAiInterviewInvite(
   candidate: { fullName: string; email: string },
   job: { title: string },
@@ -106,39 +85,6 @@ export async function sendAiInterviewInvite(
       </div>
 
       <p>This link is unique to you. Please complete the interview in one sitting when you are ready.</p>
-      <p>Best regards,<br/>${COMPANY_NAME} Hiring Team</p>
-    </div>
-  `;
-
-  return sendEmail({ to: candidate.email, subject, html });
-}
-
-export async function sendAIInterviewInvite(
-  candidate: { fullName: string; email: string },
-  job: { title: string },
-  interviewToken: string,
-): Promise<boolean> {
-  const subject = `AI Interview Invitation - ${job.title} Position`;
-  const appUrl = process.env.APP_URL || 'http://localhost:5173';
-  const interviewUrl = `${appUrl}/interview/${interviewToken}`;
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Dear ${candidate.fullName},</h2>
-      <p>You have advanced to the AI prescreen stage for the <strong>${job.title}</strong> position.</p>
-
-      <div style="background: #f5f5f5; padding: 16px; border-radius: 8px; margin: 20px 0;">
-        <p style="margin-top: 0;"><strong>What to expect</strong></p>
-        <p style="margin-bottom: 0;">You will complete coding, MCQ, and behavioral questions in one guided session. Please keep one uninterrupted browser session open while you work.</p>
-      </div>
-
-      <p>
-        <a href="${interviewUrl}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Start AI Interview</a>
-      </p>
-
-      <p>If the button does not work, open this link directly:</p>
-      <p><a href="${interviewUrl}">${interviewUrl}</a></p>
-
       <p>Best regards,<br/>${COMPANY_NAME} Hiring Team</p>
     </div>
   `;
@@ -177,35 +123,16 @@ export async function sendRejectionEmail(
   stage: 'cv' | 'interview'
 ): Promise<boolean> {
   const subject = `Update on Your Application - ${job.title}`;
+  const stageLabel = stage === 'cv' ? 'CV review' : 'interview';
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
       <h2>Dear ${candidate.fullName},</h2>
-      <p>Thank you for your interest in the <strong>${job.title}</strong> position and for taking the time to apply.</p>
+      <p>Thank you for your interest in the <strong>${job.title}</strong> position and for taking the time to complete the ${stageLabel} stage.</p>
       
       <p>After careful consideration, we have decided to move forward with other candidates whose qualifications more closely match our current needs.</p>
       
       <p>We appreciate your understanding and wish you the best in your job search.</p>
-      
-      <p>Best regards,<br/>${COMPANY_NAME} HR Team</p>
-    </div>
-  `;
-
-  return sendEmail({ to: candidate.email, subject, html });
-}
-
-export async function sendApplicationReceived(
-  candidate: { fullName: string; email: string },
-  job: { title: string }
-): Promise<boolean> {
-  const subject = `Application Received - ${job.title}`;
-
-  const html = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Dear ${candidate.fullName},</h2>
-      <p>Thank you for applying for the <strong>${job.title}</strong> position!</p>
-      
-      <p>We have received your application and will review it shortly. If your qualifications match our requirements, we will contact you for the next steps.</p>
       
       <p>Best regards,<br/>${COMPANY_NAME} HR Team</p>
     </div>
