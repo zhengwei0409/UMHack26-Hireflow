@@ -99,6 +99,7 @@ const JobDetail = () => {
   const [error, setError] = useState('');
   const [copied, setCopied] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
+  const [editingRules, setEditingRules] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -156,6 +157,7 @@ const JobDetail = () => {
     try {
       await api.jobs.updatePrescreenConfig(id, config);
       await loadData();
+      setEditingRules(false);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -163,24 +165,18 @@ const JobDetail = () => {
     }
   };
 
+  const cancelRulesEdit = () => {
+    if (!job) return;
+
+    setConfig({
+      autoScreenThreshold: job.autoScreenThreshold ?? 60,
+      shortlistSize: job.shortlistSize ?? 10,
+      closingDate: toInputDate(job.closingDate),
+    });
+    setEditingRules(false);
+  };
+
   const shortlistFinal = useMemo(() => isShortlistFinal(job), [job]);
-
-  const metrics = useMemo(() => {
-    const finalShortlistCount = shortlist.filter((candidate) => candidate.isShortlisted).length;
-    const averageScore = shortlist.length
-      ? Math.round(
-          shortlist.reduce((sum, candidate) => sum + Number(candidate.aiInterviewScore || 0), 0) /
-            shortlist.length,
-        )
-      : 0;
-
-    return [
-      { label: 'Applicants', value: candidates.length },
-      { label: shortlistFinal ? 'Final shortlist' : 'Scored candidates', value: shortlistFinal ? finalShortlistCount : shortlist.length },
-      { label: 'AI threshold', value: `${config.autoScreenThreshold}%` },
-      { label: shortlistFinal ? 'Avg. final score' : 'Avg. ranked score', value: `${averageScore}%` },
-    ];
-  }, [candidates.length, shortlist, config.autoScreenThreshold, shortlistFinal]);
 
   if (loading) {
     return (
@@ -243,24 +239,122 @@ const JobDetail = () => {
               </p>
             </div>
 
-            <div className="flex flex-col items-start gap-3 lg:items-end">
+            <div className="flex w-full max-w-md flex-col items-stretch gap-3 lg:items-end">
               <button
                 type="button"
-                className={buttonSecondaryClassName}
+                className={`${buttonSecondaryClassName} w-full lg:w-auto`}
                 onClick={copyPublicUrl}
               >
                 {copied ? 'Application link copied' : 'Copy application link'}
               </button>
-            </div>
-          </div>
 
-          <div className="grid gap-px border-t border-zinc-200 bg-zinc-200 sm:grid-cols-2 xl:grid-cols-4">
-            {metrics.map((metric) => (
-              <div key={metric.label} className="bg-zinc-50 px-6 py-4">
-                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">{metric.label}</p>
-                <p className="mt-2 text-2xl font-extrabold tracking-tight text-zinc-950">{metric.value}</p>
+              <div className="w-full rounded-md border border-zinc-200 bg-zinc-50 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="app-section-title-sm text-xl !tracking-normal text-zinc-950">Hiring rules</h2>
+                  {!editingRules && (
+                    <button
+                      type="button"
+                      className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-zinc-200 bg-white text-zinc-600 transition hover:border-zinc-300 hover:text-zinc-950 focus:outline-none focus:ring-2 focus:ring-zinc-300"
+                      onClick={() => setEditingRules(true)}
+                      aria-label="Edit hiring rules"
+                      title="Edit hiring rules"
+                    >
+                      <svg className="h-4 w-4" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                        <path
+                          d="M4 13.8V16h2.2L15 7.2 12.8 5 4 13.8Z"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinejoin="round"
+                        />
+                        <path
+                          d="m11.8 6 1.4-1.4a1.4 1.4 0 0 1 2 0l.2.2a1.4 1.4 0 0 1 0 2L14 8.2"
+                          stroke="currentColor"
+                          strokeWidth="1.8"
+                          strokeLinecap="round"
+                        />
+                      </svg>
+                    </button>
+                  )}
+                </div>
+
+                {editingRules ? (
+                  <form onSubmit={savePrescreenConfig} className="mt-4 grid gap-3">
+                    <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
+                      <span>Closing date</span>
+                      <input
+                        type="date"
+                        className={inputClassName}
+                        value={config.closingDate}
+                        onChange={(e) => setConfig((current) => ({ ...current, closingDate: e.target.value }))}
+                      />
+                    </label>
+
+                    <div className="grid gap-3 sm:grid-cols-2">
+                      <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
+                        <span>AI threshold</span>
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          className={inputClassName}
+                          value={config.autoScreenThreshold}
+                          onChange={(e) =>
+                            setConfig((current) => ({ ...current, autoScreenThreshold: Number(e.target.value) }))
+                          }
+                        />
+                      </label>
+
+                      <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
+                        <span>Shortlist size</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          className={inputClassName}
+                          value={config.shortlistSize}
+                          onChange={(e) =>
+                            setConfig((current) => ({ ...current, shortlistSize: Number(e.target.value) }))
+                          }
+                        />
+                      </label>
+                    </div>
+
+                    <div className="flex gap-2">
+                      <button
+                        type="button"
+                        className={`${buttonSecondaryClassName} flex-1`}
+                        onClick={cancelRulesEdit}
+                        disabled={savingConfig}
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        type="submit"
+                        className={`primary-cta ${buttonPrimaryClassName} flex-1`}
+                        disabled={savingConfig}
+                      >
+                        {savingConfig ? 'Saving...' : 'Save'}
+                      </button>
+                    </div>
+                  </form>
+                ) : (
+                  <div className="mt-4 grid gap-px overflow-hidden rounded-md border border-zinc-200 bg-zinc-200 sm:grid-cols-3">
+                    <div className="bg-white px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Closes</p>
+                      <p className="mt-2 text-xl font-extrabold tracking-tight text-zinc-950">{formatDate(job.closingDate)}</p>
+                    </div>
+                    <div className="bg-white px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">AI threshold</p>
+                      <p className="mt-2 text-xl font-extrabold tracking-tight text-zinc-950">{config.autoScreenThreshold}%</p>
+                    </div>
+                    <div className="bg-white px-4 py-3">
+                      <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Shortlist</p>
+                      <p className="mt-2 text-xl font-extrabold tracking-tight text-zinc-950">{config.shortlistSize}</p>
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+            </div>
           </div>
         </section>
 
@@ -270,7 +364,7 @@ const JobDetail = () => {
           </div>
         )}
 
-        <div className="grid gap-6 xl:grid-cols-[minmax(0,1.65fr)_minmax(320px,0.9fr)]">
+        <div className="grid gap-6">
           <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
             <h2 className="app-section-title text-2xl text-zinc-950">Role overview</h2>
             <p className="mt-3 whitespace-pre-wrap text-sm font-medium leading-7 text-zinc-600">{job.description}</p>
@@ -290,61 +384,6 @@ const JobDetail = () => {
                 </ul>
               </div>
             )}
-          </section>
-
-          <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm">
-            <div className="mb-5">
-              <h2 className="app-section-title-sm text-xl text-zinc-950">Hiring rules</h2>
-              <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
-                Set the application closing date and decide how strict the screening and final shortlist should be.
-              </p>
-            </div>
-
-            <form onSubmit={savePrescreenConfig} className="grid gap-5">
-              <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                <span>Closing date</span>
-                <input
-                  type="date"
-                  className={inputClassName}
-                  value={config.closingDate}
-                  onChange={(e) => setConfig((current) => ({ ...current, closingDate: e.target.value }))}
-                />
-              </label>
-
-              <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                <span>CV threshold</span>
-                <input
-                  type="number"
-                  min="0"
-                  max="100"
-                  className={inputClassName}
-                  value={config.autoScreenThreshold}
-                  onChange={(e) =>
-                    setConfig((current) => ({ ...current, autoScreenThreshold: Number(e.target.value) }))
-                  }
-                />
-              </label>
-
-              <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                <span>Shortlist size</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="50"
-                  className={inputClassName}
-                  value={config.shortlistSize}
-                  onChange={(e) => setConfig((current) => ({ ...current, shortlistSize: Number(e.target.value) }))}
-                />
-              </label>
-
-              <button
-                type="submit"
-                className={`primary-cta ${buttonPrimaryClassName}`}
-                disabled={savingConfig}
-              >
-                {savingConfig ? 'Saving...' : 'Save hiring rules'}
-              </button>
-            </form>
           </section>
         </div>
 
