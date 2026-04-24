@@ -130,6 +130,12 @@ async def get_dashboard() -> str:
     return DASHBOARD_HTML
 
 
+from pathlib import Path
+
+TRANSCRIPTS_DIR = Path(__file__).parent.parent / "transcripts"
+TRANSCRIPTS_DIR.mkdir(exist_ok=True)
+
+
 @app.get("/api/health")
 async def get_health() -> dict[str, Any]:
     """Check if joinly server is reachable."""
@@ -143,64 +149,130 @@ async def get_health() -> dict[str, Any]:
     return {"joinly": "ok" if joinly_ok else "unreachable", "browser": "not_checked"}
 
 
+@app.get("/api/transcripts")
+async def list_transcripts() -> dict[str, Any]:
+    """List all saved transcripts."""
+    transcripts = []
+    for f in TRANSCRIPTS_DIR.glob("*.json"):
+        try:
+            data = json.loads(f.read_text())
+            transcripts.append({
+                "id": f.stem,
+                "botName": data.get("botName", "Unknown"),
+                "meetingUrl": data.get("meetingUrl", ""),
+                "date": data.get("date", f.stat().st_mtime),
+                "duration": data.get("duration", ""),
+                "messageCount": len(data.get("messages", [])),
+            })
+        except Exception:
+            pass
+    return {"transcripts": sorted(transcripts, key=lambda x: x.get("date", 0), reverse=True)}
+
+
+@app.get("/api/transcripts/{transcript_id}")
+async def get_transcript(transcript_id: str) -> dict[str, Any]:
+    """Get a specific transcript."""
+    filepath = TRANSCRIPTS_DIR / f"{transcript_id}.json"
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="Transcript not found")
+    return json.loads(filepath.read_text())
+
+
+@app.post("/api/transcripts/save")
+async def save_transcript(data: dict[str, Any]) -> dict[str, Any]:
+    """Save a transcript."""
+    import uuid
+    transcript_id = data.get("id") or uuid.uuid4().hex[:8]
+    filepath = TRANSCRIPTS_DIR / f"{transcript_id}.json"
+    filepath.write_text(json.dumps(data, indent=2))
+    return {"id": transcript_id, "saved": True}
+
+
+@app.post("/api/transcripts/{transcript_id}/delete")
+async def delete_transcript(transcript_id: str) -> dict[str, Any]:
+    """Delete a transcript."""
+    filepath = TRANSCRIPTS_DIR / f"{transcript_id}.json"
+    if filepath.exists():
+        filepath.unlink()
+    return {"deleted": True}
+
+
 @app.get("/api/templates", response_model=list[MeetingBot])
 async def list_templates() -> list[MeetingBot]:
     return [
         MeetingBot(
             id="tpl001",
-            name="Sales Rep",
-            description="Handles sales calls, presents product info, handles objections",
-            category="sales",
+            name="HR Interviewer",
+            description="Conduct structured job interviews. Ask about experience, skills, and career goals.",
+            category="hr",
             is_template=True,
-            participant_name="Sales Assistant",
-            scenario="You are a professional sales representative. Gather customer requirements, present product benefits, handle objections professionally, and schedule follow-up meetings.",
+            participant_name="HR Interviewer",
+            scenario="You are a professional HR interviewer. Begin with introductions and a brief company overview. Ask open-ended questions about the candidate's experience, skills, and achievements. Cover technical abilities, problem-solving skills, and cultural fit. Allow time for candidate questions. Be conversational but thorough. End professionally.",
         ),
         MeetingBot(
             id="tpl002",
-            name="HR Interviewer",
-            description="Conducts job interviews, evaluates candidates",
-            category="hr",
+            name="Sales Rep",
+            description="Present products, handle objections, and close deals.",
+            category="sales",
             is_template=True,
-            participant_name="HR Bot",
-            scenario="Conduct a structured job interview. Ask about experience, skills, career goals. Evaluate responses and provide feedback.",
+            participant_name="Sales Assistant",
+            scenario="You are a professional sales representative. Start by building rapport and understanding customer needs. Present relevant product features with concrete benefits. Handle objections professionally by addressing concerns directly. Ask closing questions naturally. Schedule follow-up if needed.",
         ),
         MeetingBot(
             id="tpl003",
             name="Customer Support",
-            description="Handles customer support tickets and inquiries",
+            description="Resolve customer issues and provide technical support.",
             category="support",
             is_template=True,
             participant_name="Support Agent",
-            scenario="Assist customers with their inquiries. Gather details about their issue, provide solutions, escalate when needed.",
+            scenario="You are a helpful customer support agent. Greet the customer warmly. Listen carefully to their issue. Ask clarifying questions to understand the problem. Provide clear solutions or step-by-step guidance. Escalate if needed. Follow up to ensure satisfaction.",
         ),
         MeetingBot(
             id="tpl004",
-            name="Product Demo",
-            description="Delivers product demonstrations to potential customers",
-            category="sales",
+            name="Technical Interviewer",
+            description="Assess coding skills, system design, and problem-solving.",
+            category="hr",
             is_template=True,
-            participant_name="Demo Guide",
-            scenario="Give a personalized product demo. Understand customer needs first, then showcase relevant features, handle questions.",
+            participant_name="Tech Interviewer",
+            scenario="You are conducting a technical interview. Ask the candidate to describe their approach to coding problems. Discuss trade-offs and alternative solutions. Ask about system design for scalable applications. Evaluate communication skills and technical depth. Provide feedback at the end.",
         ),
         MeetingBot(
             id="tpl005",
             name="Training Coach",
-            description="Conducts training sessions and coaching",
+            description="Lead training sessions and check understanding.",
             category="training",
             is_template=True,
             participant_name="Trainer",
-            scenario="Lead a training session. Explain concepts clearly, provide examples, answer questions, check understanding.",
+            scenario="You are a training facilitator. Start with learning objectives. Explain concepts clearly with examples. Use interactive Q&A to check understanding. Provide practical exercises when appropriate. Summarize key takeaways at the end.",
         ),
         MeetingBot(
             id="tpl006",
             name="Meeting Notetaker",
-            description="Joins meetings to take notes and track action items",
+            description="Take meeting notes and track action items.",
             category="productivity",
             is_template=True,
             participant_name="Note Taker",
-            scenario="Attend the meeting and take detailed notes. Track decisions, action items, and key points. Provide a summary afterward.",
+            scenario="You are attending this meeting to take comprehensive notes. Listen actively and record key discussion points. Identify decisions made and action items assigned. Note any deadlines or follow-ups mentioned. Provide a clean summary after the meeting.",
         ),
-]
+        MeetingBot(
+            id="tpl007",
+            name="Product Demo",
+            description="Showcase products and answer questions.",
+            category="sales",
+            is_template=True,
+            participant_name="Demo Guide",
+            scenario="You are demonstrating our product. Start with a brief overview of the customer's needs. Give a live walkthrough of key features. Highlight how the product solves their specific problems. Answer questions confidently. Offer to continue with a trial or deeper dive.",
+        ),
+        MeetingBot(
+            id="tpl008",
+            name="Behavioral Interviewer",
+            description="Assess soft skills and cultural fit.",
+            category="hr",
+            is_template=True,
+            participant_name="Interviewer",
+            scenario="You are conducting a behavioral interview. Ask for specific examples of past experiences using the STAR method. Focus on leadership, teamwork, conflict resolution, and adaptability. Listen actively and ask follow-up questions. Be genuinely curious about their experiences.",
+        ),
+    ]
 
 
 @app.get("/api/health")
@@ -337,14 +409,16 @@ async def create_bot(data: MeetingBotCreate) -> MeetingBot:
             cmd = [
                 docker_path, "run", "-d",
                 "--name", container_name,
-                "-e", f"ILMU_API_KEY={os.environ.get('ILMU_API_KEY', os.environ.get('DEEPSEEK_API_KEY', 'REDACTED_DEEPSEEK_API_KEY'))}",
-                "-e", "ILMU_BASE_URL=https://api.ilmu.ai/v1",
+                "--add-host=host.docker.internal:host-gateway",
+                "-e", f"ILMU_API_KEY={os.environ.get('ILMU_API_KEY', os.environ.get('DEEPSEEK_API_KEY', 'YOUR_API_KEY_HERE'))}",
+                "-e", "ILMU_BASE_URL=https://api.deepseek.com/v1",
                 "-e", "JOINLY_PROMPT={prompt}",
+                "-e", "JOINLY_SERVER_URL=http://host.docker.internal:8000",
                 "joinly:latest",
                 "--client", data.meeting_url,
                 "--name", data.participant_name or "AI Bot",
                 "--llm-provider", "ilmu",
-                "--llm-model", "ilmu-glm-5.1",
+                "--llm-model", "deepseek-chat",
             ]
 
             subprocess.run(cmd, capture_output=True, text=True, timeout=60)
@@ -472,6 +546,20 @@ async def delete_bot(bot_id: str) -> None:
     state = manager.sessions[bot_id]
     if state.bot.status == BotStatus.ACTIVE:
         await stop_bot(bot_id)
+
+    transcript_data = await get_transcript(bot_id)
+    if transcript_data.get('segments'):
+        import uuid
+        transcript_id = uuid.uuid4().hex[:8]
+        save_data = {
+            "id": transcript_id,
+            "botName": state.bot.name,
+            "meetingUrl": state.bot.meeting_url,
+            "date": datetime.now(timezone.utc).isoformat(),
+            "messages": transcript_data.get('segments', [])
+        }
+        filepath = TRANSCRIPTS_DIR / f"{transcript_id}.json"
+        filepath.write_text(json.dumps(save_data, indent=2))
 
     del manager.sessions[bot_id]
 
@@ -641,8 +729,9 @@ DASHBOARD_HTML = """
         
         .app-container {
             display: grid;
-            grid-template-columns: 280px 1fr 320px;
+            grid-template-columns: 280px 1fr;
             height: 100vh;
+            overflow: hidden;
         }
         
         /* Sidebar */
@@ -764,6 +853,14 @@ DASHBOARD_HTML = """
             display: flex;
             flex-direction: column;
             background: #0f0f0f;
+            overflow-y: auto;
+            height: 100vh;
+        }
+        
+        .main-content > div:first-child {
+            flex: 1;
+            min-height: 0;
+            overflow-y: auto;
         }
         
         .video-area {
@@ -899,75 +996,14 @@ DASHBOARD_HTML = """
             margin-top: 4px;
         }
         
-        /* Right panel */
-        .right-panel {
+        /* Transcript panel - expand to full width */
+        .transcript-area {
+            flex: 1;
             background: #1a1a1a;
-            border-left: 1px solid #2a2a2a;
+            border-top: 1px solid #2a2a2a;
             display: flex;
             flex-direction: column;
-        }
-        
-        .panel-tabs {
-            display: flex;
-            border-bottom: 1px solid #2a2a2a;
-        }
-        
-        .panel-tab {
-            flex: 1;
-            padding: 14px;
-            text-align: center;
-            font-size: 13px;
-            color: #6b7280;
-            cursor: pointer;
-            border-bottom: 2px solid transparent;
-        }
-        
-        .panel-tab.active {
-            color: #fff;
-            border-bottom-color: #6366f1;
-        }
-        
-        .panel-content {
-            flex: 1;
-            overflow-y: auto;
-            padding: 16px;
-        }
-        
-        .participants-list {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-        
-        .participant {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            padding: 12px;
-            background: #262626;
-            border-radius: 10px;
-        }
-        
-        .participant-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: #6366f1;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 600;
-            font-size: 14px;
-        }
-        
-        .participant-info h4 {
-            font-size: 14px;
-            font-weight: 600;
-        }
-        
-        .participant-info p {
-            font-size: 12px;
-            color: #6b7280;
+            min-height: 300px;
         }
         
         /* Input area */
@@ -1195,9 +1231,9 @@ DASHBOARD_HTML = """
                     <i class="fas fa-folder"></i>
                     <span>Library</span>
                 </div>
-                <div class="nav-item" onclick="switchNav('analytics')" data-nav="analytics">
-                    <i class="fas fa-chart-bar"></i>
-                    <span>Analytics</span>
+                <div class="nav-item" onclick="switchNav('transcripts')" data-nav="transcripts">
+                    <i class="fas fa-file-alt"></i>
+                    <span>Transcripts</span>
                 </div>
                 <div class="nav-item" onclick="switchNav('settings')" data-nav="settings">
                     <i class="fas fa-cog"></i>
@@ -1251,32 +1287,8 @@ DASHBOARD_HTML = """
                     <div class="empty-state">
                         <i class="fas fa-align-left"></i>
                         <h3>Transcript will appear here</h3>
-                        <p>Real-time transcription of the meeting</p>
+<p>Real-time transcription of the meeting</p>
                     </div>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Right panel -->
-        <div class="right-panel">
-            <div class="panel-tabs">
-                <div class="panel-tab active" onclick="switchPanel('participants')">Participants</div>
-                <div class="panel-tab" onclick="switchPanel('tools')">Tools</div>
-                <div class="panel-tab" onclick="switchPanel('chat')">Chat</div>
-            </div>
-            <div class="panel-content" id="panelContent">
-                <div class="participants-list" id="participantsList">
-                    <div class="empty-state">
-                        <i class="fas fa-users"></i>
-                        <h3>No participants yet</h3>
-                        <p>Participants will appear once the meeting starts</p>
-                    </div>
-                </div>
-            </div>
-            <div class="input-area">
-                <div class="input-box">
-                    <input type="text" id="chatInput" placeholder="Type a message..." onkeypress="handleChatKey(event)">
-                    <button onclick="sendChat()"><i class="fas fa-paper-plane"></i></button>
                 </div>
             </div>
         </div>
@@ -1637,29 +1649,25 @@ DASHBOARD_HTML = """
         function showNavContent(nav) {
             const main = document.querySelector('.main-content');
             const transcript = document.querySelector('.transcript-area');
-            const right = document.querySelector('.right-panel');
             const fab = document.querySelector('.fab');
             
             if (nav === 'library') {
                 main.innerHTML = getLibraryHTML();
                 transcript.style.display = 'none';
-                right.style.display = 'none';
                 fab.style.display = 'none';
-                loadTemplates();
-            } else if (nav === 'analytics') {
-                main.innerHTML = getAnalyticsHTML();
+                setTimeout(loadTemplates, 100);
+            } else if (nav === 'transcripts') {
+                main.innerHTML = getTranscriptsHTML();
                 transcript.style.display = 'none';
-                right.style.display = 'none';
                 fab.style.display = 'none';
+                setTimeout(loadTranscripts, 100);
             } else if (nav === 'settings') {
                 main.innerHTML = getSettingsHTML();
                 transcript.style.display = 'none';
-                right.style.display = 'none';
                 fab.style.display = 'none';
             } else {
                 main.innerHTML = getSessionsHTML();
                 transcript.style.display = 'flex';
-                right.style.display = 'flex';
                 fab.style.display = 'flex';
                 loadBots();
             }
@@ -1711,9 +1719,9 @@ DASHBOARD_HTML = """
             `;
         }
         
-        function getLibraryHTML() {
+function getLibraryHTML() {
             return `
-                <div style="padding: 24px;">
+                <div style="padding: 24px; overflow-y: auto; flex: 1;">
                     <h2 style="margin-bottom: 24px;">Agent Library</h2>
                     <div style="display: flex; gap: 12px; margin-bottom: 24px;">
                         <input type="text" placeholder="Search agents..." style="flex:1; background:#262626; border:1px solid #3f3f46; padding:12px; border-radius:8px; color:#fff;">
@@ -1730,6 +1738,17 @@ DASHBOARD_HTML = """
                             <i class="fas fa-robot"></i>
                             <h3>Loading...</h3>
                         </div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        function getTranscriptsHTML() {
+            return `
+                <div style="padding: 24px; overflow-y: auto; flex: 1;">
+                    <h2 style="margin-bottom: 24px;">Interview Transcripts</h2>
+                    <div style="background: #262626; padding: 20px; border-radius: 12px;">
+                        <div id="transcriptsList" style="color: #6b7280; text-align: center; padding: 40px;">Loading transcripts...</div>
                     </div>
                 </div>
             `;
@@ -1781,14 +1800,57 @@ DASHBOARD_HTML = """
                         <div class="form-group">
                             <label>Default Voice</label>
                             <select style="width:100%; background:#1a1a1a; border:1px solid #3f3f46; padding:12px; border-radius:8px; color:#fff;">
-                                <option>ElevenLabs - Adam</option>
                                 <option>Kokoro - Jennifer</option>
+                                <option>ElevenLabs - Adam</option>
                             </select>
                         </div>
                     </div>
                     <button class="btn btn-primary">Save Settings</button>
                 </div>
             `;
+        }
+        
+        function getTranscriptsHTML() {
+            return `
+                <div style="padding: 24px;">
+                    <h2 style="margin-bottom: 24px;">Interview Transcripts</h2>
+                    <div style="background: #262626; padding: 20px; border-radius: 12px;">
+                        <div id="transcriptsList" style="color: #6b7280; text-align: center; padding: 40px;">Loading transcripts...</div>
+                    </div>
+                </div>
+            `;
+        }
+        
+        async function loadTranscripts() {
+            try {
+                const res = await fetch('/api/transcripts');
+                const data = await res.json();
+                const list = document.getElementById('transcriptsList');
+                if (!list) return;
+                
+                if (!data.transcripts || data.transcripts.length === 0) {
+                    list.innerHTML = '<div style="text-align: center; padding: 40px;"><i class="fas fa-file-alt" style="font-size: 48px; color: #4b5563; margin-bottom: 16px;"></i><p>No transcripts yet</p></div>';
+                    return;
+                }
+                
+                list.innerHTML = data.transcripts.map(t => `
+                    <div style="background: #1a1a1a; padding: 16px; border-radius: 8px; margin-bottom: 12px; cursor: pointer;" onclick="viewTranscript('${t.id}')">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <div style="font-weight: 600; margin-bottom: 4px;">${t.botName || 'Interview Bot'}</div>
+                                <div style="color: #6b7280; font-size: 13px;">${t.meetingUrl || 'Meeting'}</div>
+                            </div>
+                            <div style="color: #6b7280; font-size: 12px;">${t.date || 'Today'}</div>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (e) {
+                document.getElementById('transcriptsList').innerHTML = '<div style="text-align: center; padding: 40px; color: #ef4444;">Failed to load transcripts</div>';
+            }
+        }
+        
+        function viewTranscript(id) {
+            window.open('/api/transcripts/' + id, '_blank');
         }
         
         async function loadTemplates() {
