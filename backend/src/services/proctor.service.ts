@@ -30,18 +30,3 @@ export async function logProctorEvents(
 
   return created;
 }
-
-export async function getProctorSummary(sessionId: string) {
-  const events = await prisma.proctorEvent.findMany({
-    where: { sessionId },
-    orderBy: { occurredAt: 'asc' },
-  });
-
-  const totalSeverity = events.reduce((sum, event) => sum + event.severity, 0);
-
-  return {
-    count: events.length,
-    totalSeverity,
-    events,
-  };
-}

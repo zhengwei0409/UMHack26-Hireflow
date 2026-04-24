@@ -65,13 +65,6 @@ export const jobs = {
       body: JSON.stringify({ messages }),
     }).then(handleResponse),
 
-  update: (id, data) =>
-    fetch(`${API_BASE}/jobs/${id}`, {
-      method: 'PATCH',
-      headers: headers(),
-      body: JSON.stringify(data),
-    }).then(handleResponse),
-
   updatePrescreenConfig: (id, data) =>
     fetch(`${API_BASE}/jobs/${id}/prescreen-config`, {
       method: 'PATCH',
@@ -234,19 +227,6 @@ export const interviews = {
       headers: { 'Content-Type': 'application/json' },
     }).then(handleResponse),
 
-  shortlist: (jobId) => {
-    const query = jobId ? `?${new URLSearchParams({ jobId }).toString()}` : '';
-    return fetch(`${API_BASE}/interviews/ranked-shortlist${query}`, {
-      headers: headers(),
-    }).then(handleResponse);
-  },
-
-  updateShortlist: (sessionId, shortlisted) =>
-    fetch(`${API_BASE}/interviews/ranked-shortlist/${sessionId}`, {
-      method: 'PATCH',
-      headers: headers(),
-      body: JSON.stringify({ shortlisted }),
-    }).then(handleResponse),
 };
 
 export default { auth, jobs, candidates, dashboard, interviews };
