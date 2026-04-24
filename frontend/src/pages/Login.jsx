@@ -168,7 +168,7 @@ const Login = () => {
           <p className="mb-5 inline-flex rounded-full border border-[#d7d7d7] bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#4d4a82] shadow-[0_12px_30px_rgba(17,24,39,0.06)] backdrop-blur">
             Premium hiring command center
           </p>
-          <h1 className="max-w-xl text-6xl font-black leading-[1.02] tracking-[-0.035em] text-[#111827] xl:text-7xl">
+          <h1 className="app-page-title max-w-xl text-6xl text-[#111827] xl:text-7xl">
             Manage hiring in one simple workspace.
           </h1>
           <p className="mt-6 max-w-lg text-lg font-semibold leading-8 text-[#6b7280]">
@@ -222,7 +222,7 @@ const Login = () => {
               <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[#4d4a82]">
                 {isRegister ? 'Start your workspace' : 'Welcome back'}
               </p>
-              <h2 id="auth-title" className="text-4xl font-black leading-tight tracking-[-0.06em] text-[#191919]">
+              <h2 id="auth-title" className="app-section-title text-4xl text-[#191919]">
                 {isRegister ? 'Create account' : 'Log in to HireFlow'}
               </h2>
               <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-[#777777]">

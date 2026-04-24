@@ -78,7 +78,7 @@ const InterviewComplete = () => {
             </div>
           )}
           <p className="interview-reveal mt-6 text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">{eyebrow}</p>
-          <h1 className="interview-reveal mt-3 text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-4xl">{heading}</h1>
+          <h1 className="app-page-title interview-reveal mt-3 text-3xl text-zinc-950 sm:text-4xl">{heading}</h1>
           <p className="interview-reveal mx-auto mt-4 max-w-3xl text-sm font-medium leading-7 text-zinc-600 sm:text-base">{message}</p>
           {isAnalyzing && (
             <div className="interview-reveal mt-6 flex items-center justify-center gap-2">

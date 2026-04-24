@@ -130,66 +130,6 @@ export async function getCandidateById(id: string) {
   };
 }
 
-export async function getCandidateAIReport(id: string) {
-  const candidate = await prisma.candidate.findUnique({
-    where: { id },
-    include: {
-      job: true,
-      interviewSessions: {
-        include: {
-          questions: {
-            include: {
-              answers: true,
-            },
-            orderBy: { sequence: 'asc' },
-          },
-          proctorEvents: {
-            orderBy: { occurredAt: 'desc' },
-          },
-        },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
-      },
-    },
-  });
-
-  if (!candidate) throw new Error('CANDIDATE_NOT_FOUND');
-
-  const latestSession = candidate.interviewSessions[0] || null;
-
-  return {
-    candidateId: candidate.id,
-    fullName: candidate.fullName,
-    jobTitle: candidate.job.title,
-    status: candidate.status,
-    glmScore: candidate.glmScore,
-    aiInterviewScore: candidate.aiInterviewScore,
-    aiInterviewRank: candidate.aiInterviewRank,
-    isShortlisted: candidate.isShortlisted,
-    autoScreenDecision: candidate.autoScreenDecision,
-    summary: latestSession?.scoreBreakdown ?? null,
-    session: latestSession
-      ? {
-          id: latestSession.id,
-          status: latestSession.status,
-          startedAt: latestSession.startedAt,
-          completedAt: latestSession.completedAt,
-          scoredAt: latestSession.scoredAt,
-          overallScore: latestSession.overallScore,
-          scoreBreakdown: latestSession.scoreBreakdown,
-          questions: latestSession.questions.map((question) => ({
-            id: question.id,
-            type: question.type,
-            sequence: question.sequence,
-            prompt: question.prompt,
-            latestAnswer: question.answers[0] || null,
-          })),
-          proctorEvents: latestSession.proctorEvents,
-        }
-      : null,
-  };
-}
-
 export async function getCvFilePath(id: string) {
   const candidate = await prisma.candidate.findUnique({ where: { id }, select: { cvFilePath: true } });
   if (!candidate) throw new Error('CANDIDATE_NOT_FOUND');

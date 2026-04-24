@@ -47,6 +47,34 @@ h2 {
   line-height: 0.98;
 }
 
+.dashboard-title {
+  font-family: var(--font-ui);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+}
+
+.app-page-title {
+  font-family: var(--font-ui);
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 0.98;
+}
+
+.app-section-title {
+  font-family: var(--font-ui);
+  font-weight: 900;
+  letter-spacing: -0.028em;
+  line-height: 1.02;
+}
+
+.app-section-title-sm {
+  font-family: var(--font-ui);
+  font-weight: 900;
+  letter-spacing: -0.022em;
+  line-height: 1.04;
+}
+
 @keyframes auth-rise {
   from {
     opacity: 0;

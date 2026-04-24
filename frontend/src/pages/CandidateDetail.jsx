@@ -13,8 +13,8 @@ const STATUS_ACTIONS = {
     { key: 'reject-cv', label: 'Reject Candidate', variant: 'danger' },
   ],
   AI_INTERVIEW_SCORED: [
-    { key: 'advance-to-human-interview', label: 'Advance to Human Interview', variant: 'success' },
-    { key: 'reject-after-ai', label: 'Reject After AI Review', variant: 'danger' },
+    { key: 'advance-to-human-interview', label: 'Accept for Human Interview', variant: 'success' },
+    { key: 'reject-interview', label: 'Reject Candidate', variant: 'danger' },
   ],
   INTERVIEW_PENDING: [{ key: 'schedule-interview', label: 'Schedule Interview', variant: 'primary' }],
   INTERVIEW_SCHEDULED: [{ key: 'mark-interview-done', label: 'Mark Interview Done', variant: 'primary' }],
@@ -24,7 +24,7 @@ const STATUS_ACTIONS = {
   ],
   INTERVIEW_DONE: [
     { key: 'accept-interview', label: 'Accept & Generate Offer', variant: 'success' },
-    { key: 'reject-interview', label: 'Reject', variant: 'danger' },
+    { key: 'reject-interview', label: 'Reject Candidate', variant: 'danger' },
   ],
   CV_PARSE_FAILED: [{ key: 'retry', label: 'Retry Analysis', variant: 'primary' }],
   INTERVIEW_INVITE_FAILED: [{ key: 'retry', label: 'Retry Invite', variant: 'primary' }],
@@ -60,6 +60,125 @@ const getRecommendationTone = (value) => {
   return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
+const PIPELINE_STAGES = [
+  {
+    key: 'application',
+    label: 'Application',
+    description: 'CV received',
+    statuses: ['APPLIED', 'CV_PARSING', 'CV_PARSE_FAILED'],
+  },
+  {
+    key: 'cv-review',
+    label: 'Auto Screening',
+    description: 'CV score check',
+    statuses: ['CV_UNDER_REVIEW', 'CV_REJECTED'],
+  },
+  {
+    key: 'ai-interview',
+    label: 'AI Interview',
+    description: 'Invite to scored',
+    statuses: [
+      'AI_INTERVIEW_INVITED',
+      'AI_INTERVIEW_IN_PROGRESS',
+      'AI_INTERVIEW_COMPLETED',
+    ],
+  },
+  {
+    key: 'hr-decision',
+    label: 'HR Decision',
+    description: 'For human interview',
+    statuses: [
+      'AI_INTERVIEW_SCORED',
+    ],
+  },
+  {
+    key: 'human-interview',
+    label: 'Human Interview',
+    description: 'Schedule to done',
+    statuses: [
+      'INTERVIEW_PENDING',
+      'INTERVIEW_SCHEDULED',
+      'INTERVIEW_CONFIRMED',
+      'INTERVIEW_RESCHEDULE_REQUESTED',
+      'INTERVIEW_INVITE_FAILED',
+      'INTERVIEW_DONE',
+      'INTERVIEW_REJECTED',
+    ],
+  },
+  {
+    key: 'offer',
+    label: 'Offer',
+    description: 'Generate and send',
+    statuses: ['OFFER_GENERATING', 'OFFER_SENT'],
+  },
+  {
+    key: 'hired',
+    label: 'Hired',
+    description: 'Onboarding',
+    statuses: ['ONBOARDING', 'HIRED'],
+  },
+];
+
+const TERMINAL_STAGE_BY_STATUS = {
+  CV_REJECTED: 'cv-review',
+  INTERVIEW_REJECTED: 'human-interview',
+  FAILED: 'application',
+};
+
+const getPipelineIndex = (status) => {
+  const normalized = String(status || '').toUpperCase();
+  const stageKey = TERMINAL_STAGE_BY_STATUS[normalized];
+  const directIndex = PIPELINE_STAGES.findIndex((stage) => stage.statuses.includes(normalized));
+
+  if (stageKey) {
+    return PIPELINE_STAGES.findIndex((stage) => stage.key === stageKey);
+  }
+
+  return directIndex >= 0 ? directIndex : 0;
+};
+
+const getPipelineTone = (status) => {
+  const normalized = String(status || '').toUpperCase();
+
+  if (normalized.includes('FAILED')) {
+    return {
+      currentDot: 'border-red-500 bg-red-500 text-white shadow-red-200',
+      currentCard: 'border-red-200 bg-red-50 text-red-900',
+      connector: 'bg-red-400',
+      eyebrow: 'text-red-600',
+      currentLabel: 'Needs attention',
+    };
+  }
+
+  if (normalized.includes('REJECTED')) {
+    return {
+      currentDot: 'border-red-500 bg-red-500 text-white shadow-red-200',
+      currentCard: 'border-red-200 bg-red-50 text-red-900',
+      connector: 'bg-red-400',
+      eyebrow: 'text-red-600',
+      currentLabel: 'Closed',
+    };
+  }
+
+  if (normalized === 'HIRED' || normalized === 'ONBOARDING') {
+    return {
+      currentDot: 'border-emerald-500 bg-emerald-500 text-white shadow-emerald-200',
+      currentCard: 'border-emerald-200 bg-emerald-50 text-emerald-950',
+      connector: 'bg-emerald-500',
+      eyebrow: 'text-emerald-700',
+      currentLabel: 'Final stage',
+    };
+  }
+
+  return {
+    currentDot: 'border-zinc-950 bg-zinc-950 text-white shadow-zinc-300',
+    currentCard: 'border-zinc-950 bg-white text-zinc-950',
+    connector: 'bg-zinc-950',
+    eyebrow: 'text-zinc-600',
+    currentLabel: 'Current stage',
+  };
+};
+
 const getActionButtonClass = (variant) => {
   if (variant === 'danger') {
     return buttonDangerClassName;
@@ -79,7 +198,7 @@ const getActionButtonClass = (variant) => {
 const DetailCard = ({ title, description, children }) => (
   <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm lg:p-8">
     <div className="mb-5">
-      <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">{title}</h2>
+      <h2 className="app-section-title text-2xl text-zinc-950">{title}</h2>
       {description && <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">{description}</p>}
     </div>
     {children}
@@ -92,6 +211,97 @@ const MetricTile = ({ label, value }) => (
     <p className="mt-2 text-xl font-extrabold tracking-tight text-zinc-950">{value}</p>
   </div>
 );
+
+const PipelineProgress = ({ status }) => {
+  const currentIndex = getPipelineIndex(status);
+  const tone = getPipelineTone(status);
+  const progress =
+    PIPELINE_STAGES.length > 1 ? Math.round((currentIndex / (PIPELINE_STAGES.length - 1)) * 100) : 0;
+
+  return (
+    <div className="border-t border-zinc-200 bg-zinc-50 px-4 py-5 sm:px-6 lg:px-8">
+      <div className="mb-4 flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <p className={`text-xs font-extrabold uppercase tracking-[0.18em] ${tone.eyebrow}`}>
+            Pipeline position
+          </p>
+          <h2 className="app-section-title-sm mt-1 text-xl text-zinc-950">
+            {formatStatusLabel(status)}
+          </h2>
+        </div>
+        <div className="min-w-[150px] text-left sm:text-right">
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Progress</p>
+          <p className="mt-1 text-2xl font-black tracking-tight text-zinc-950">{progress}%</p>
+        </div>
+      </div>
+
+      <div className="overflow-x-auto pb-2">
+        <div className="grid min-w-[980px] grid-cols-7 items-start">
+          {PIPELINE_STAGES.map((stage, index) => {
+            const isComplete = index < currentIndex;
+            const isCurrent = index === currentIndex;
+            const isPending = index > currentIndex;
+            const connectorClass = isComplete
+              ? tone.connector
+              : isCurrent
+                ? 'bg-gradient-to-r from-zinc-950 to-zinc-200'
+                : 'bg-zinc-200';
+
+            return (
+              <div key={stage.key} className="relative px-2">
+                {index < PIPELINE_STAGES.length - 1 && (
+                  <div className={`absolute left-1/2 top-5 h-1 w-full ${connectorClass}`} aria-hidden="true" />
+                )}
+
+                <div
+                  className={`relative z-10 flex min-h-[142px] flex-col rounded-md border p-3 transition ${
+                    isCurrent
+                      ? `${tone.currentCard} shadow-sm`
+                      : isComplete
+                        ? 'border-zinc-300 bg-white text-zinc-950'
+                        : 'border-zinc-200 bg-zinc-100 text-zinc-500'
+                  }`}
+                >
+                  <div
+                    className={`grid h-10 w-10 place-items-center rounded-full border-2 text-sm font-black shadow-lg ${
+                      isCurrent
+                        ? tone.currentDot
+                        : isComplete
+                          ? 'border-zinc-950 bg-white text-zinc-950 shadow-zinc-200'
+                          : 'border-zinc-300 bg-white text-zinc-400 shadow-zinc-100'
+                    }`}
+                    aria-hidden="true"
+                  >
+                    {isComplete ? '✓' : index + 1}
+                  </div>
+
+                  <div className="mt-4">
+                    <p className="text-sm font-black leading-5 text-current">{stage.label}</p>
+                    <p className="mt-1 text-xs font-semibold leading-5 text-current opacity-70">{stage.description}</p>
+                  </div>
+
+                  <div className="mt-auto pt-4">
+                    <span
+                      className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${
+                        isCurrent
+                          ? 'bg-zinc-950 text-white'
+                          : isComplete
+                            ? 'bg-zinc-100 text-zinc-700'
+                            : 'bg-white text-zinc-400'
+                      }`}
+                    >
+                      {isCurrent ? tone.currentLabel : isComplete ? 'Complete' : isPending ? 'Pending' : ''}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const CandidateDetail = () => {
   const { id } = useParams();
@@ -172,9 +382,6 @@ const CandidateDetail = () => {
           break;
         case 'advance-to-human-interview':
           action = api.candidates.advanceToHumanInterview(id, note);
-          break;
-        case 'reject-after-ai':
-          action = api.candidates.rejectAfterAi(id, note);
           break;
         case 'mark-interview-done':
           action = api.candidates.markInterviewDone(id);
@@ -309,7 +516,7 @@ const CandidateDetail = () => {
                 </span>
               </div>
 
-              <h1 className="mt-4 text-3xl font-extrabold tracking-tight text-zinc-950 sm:text-4xl">
+              <h1 className="app-page-title mt-4 text-3xl text-zinc-950 sm:text-4xl">
                 {candidate.fullName}
               </h1>
               <p className="mt-3 text-sm font-medium leading-6 text-zinc-600 sm:text-base">
@@ -337,6 +544,8 @@ const CandidateDetail = () => {
               </div>
             ))}
           </div>
+
+          <PipelineProgress status={candidate.status} />
         </section>
 
         {error && (
@@ -503,7 +712,7 @@ const CandidateDetail = () => {
           <div className="grid gap-6 self-start xl:sticky xl:top-6">
             <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="mb-5">
-                <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Actions</h2>
+                <h2 className="app-section-title-sm text-xl text-zinc-950">Actions</h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
                   Available actions depend on the current workflow status.
                 </p>
@@ -543,7 +752,7 @@ const CandidateDetail = () => {
 
             <section className="rounded-md border border-zinc-200 bg-white p-6 shadow-sm">
               <div className="mb-5">
-                <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Documents</h2>
+                <h2 className="app-section-title-sm text-xl text-zinc-950">Documents</h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
                   Open the uploaded resume whenever you need the original source material.
                 </p>
@@ -561,7 +770,7 @@ const CandidateDetail = () => {
 
             <section className="rounded-md border border-red-200 bg-white p-6 shadow-sm">
               <div className="mb-5">
-                <h2 className="text-xl font-extrabold tracking-tight text-zinc-950">Danger zone</h2>
+                <h2 className="app-section-title-sm text-xl text-zinc-950">Danger zone</h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
                   Delete this candidate and all associated workflow data.
                 </p>
@@ -588,7 +797,7 @@ const CandidateDetail = () => {
               onClick={(e) => e.stopPropagation()}
             >
               <div className="mb-6">
-                <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">Schedule interview</h2>
+                <h2 className="app-section-title text-2xl text-zinc-950">Schedule interview</h2>
                 <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
                   Add the details below and the system will send the interview email to the candidate.
                 </p>
