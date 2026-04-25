@@ -32,7 +32,7 @@ const navItems = [
     ),
   },
   {
-    to: '/shortlist',
+    to: '/ranked-shortlist',
     label: 'Ranked Shortlist',
     icon: (
       <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
@@ -58,7 +58,6 @@ const navItems = [
       </svg>
     ),
   },
-  >>>>>>> Stashed changes
   ];
 
 const getInitial = (user) => (user?.name || user?.email || 'HF').slice(0, 1).toUpperCase();

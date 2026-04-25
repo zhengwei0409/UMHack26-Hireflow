@@ -7,6 +7,8 @@ import {
 } from '../styles/buttonStyles';
 import InDepthCVAnalysisModal from '../components/InDepthCVAnalysisModal';
 
+const sectionCountClassName = 'inline-flex min-h-7 items-center rounded-full bg-zinc-100 px-2.5 text-xs font-black tracking-[0.08em] text-zinc-600';
+
 const ActionsDropdown = ({ position, onAction }) => {
   const [open, setOpen] = useState(false);
   const ref = useRef(null);

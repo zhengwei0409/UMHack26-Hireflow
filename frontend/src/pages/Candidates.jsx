@@ -282,6 +282,7 @@ const Candidates = () => {
   const [filters, setFilters] = useState({ jobId: '', status: searchParams.get('status') || '' });
   const [analysisCandidate, setAnalysisCandidate] = useState(null);
   const [showAnalysis, setShowAnalysis] = useState(false);
+  const [collapsedLanes, setCollapsedLanes] = useState({});
 
   useEffect(() => {
     loadData();
@@ -334,6 +335,15 @@ const Candidates = () => {
       pendingReview,
     };
   }, [candidates]);
+
+  const candidateLanes = useMemo(() =>
+    reviewLanes.map((lane) => ({
+      ...lane,
+      candidates: candidates.filter((c) =>
+        lane.statuses.includes(String(c.status || '').toUpperCase())
+      ),
+    })).filter((lane) => lane.candidates.length > 0),
+  [candidates]);
 
   const toggleLane = (laneKey) => {
     setCollapsedLanes((current) => ({

@@ -454,7 +454,7 @@ function normalizeWords(value: string) {
     .filter((word) => word.length >= 3);
 }
 
-function extractJsonFromResponse(text: string): any {
+export function extractJsonFromResponse(text: string): any {
   const jsonMatch =
     text.match(/```json\n([\s\S]*?)\n```/) ||
     text.match(/```\n([\s\S]*?)\n```/) ||
@@ -499,7 +499,7 @@ function normalizeJobDraft(raw: any): JobDraftData | null {
   return draft;
 }
 
-async function callLLM(messages: GLMMessage[], temperature = 0.5): Promise<string | null> {
+export async function callLLM(messages: GLMMessage[], temperature = 0.5): Promise<string | null> {
   if (!GLM_API_KEY) {
     return null;
   }
