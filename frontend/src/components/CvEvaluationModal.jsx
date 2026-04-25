@@ -3,9 +3,8 @@ import api from '../services/api';
 
 const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
   const [loading, setLoading] = useState(false);
-  const [analysis, setAnalysis] = useState(null);
   const [investigation, setInvestigation] = useState(null);
-  const [activeTab, setActiveTab] = useState('cv');
+  const [activeTab, setActiveTab] = useState('investigation');
 
   useEffect(() => {
     if (isOpen && candidateId) {
@@ -16,15 +15,10 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
   const loadData = async () => {
     setLoading(true);
     try {
-      const [candidateRes, investigationRes] = await Promise.all([
-        api.candidates.get(candidateId).catch(() => ({ data: null })),
-        api.investigation.getResult(candidateId).catch(() => ({ data: null })),
-      ]);
-
-      setAnalysis(candidateRes.data?.glmAnalysis || null);
+      const investigationRes = await api.investigation.getResult(candidateId).catch(() => ({ data: null }));
       setInvestigation(investigationRes.data || null);
     } catch (err) {
-      console.error('Failed to load analysis:', err);
+      console.error('Failed to load verification:', err);
     } finally {
       setLoading(false);
     }
@@ -60,7 +54,7 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
         </div>
 
         <div className="mb-4 flex gap-2 border-b border-zinc-200">
-          {['cv', 'investigation', 'skills'].map((tab) => (
+          {['investigation', 'skills'].map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -70,7 +64,7 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
                   : 'text-zinc-500 hover:text-zinc-700'
               }`}
             >
-              {tab === 'cv' ? 'CV Analysis' : tab === 'investigation' ? 'Investigation' : 'Skills Verification'}
+              {tab === 'investigation' ? 'Investigation' : 'Skills Verification'}
             </button>
           ))}
         </div>
@@ -78,60 +72,10 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
         {loading ? (
           <div className="py-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto"></div>
-            <p className="mt-4 text-sm font-medium text-zinc-500">Loading analysis...</p>
+            <p className="mt-4 text-sm font-medium text-zinc-500">Loading verification...</p>
           </div>
         ) : (
           <>
-            {activeTab === 'cv' && (
-              <div className="space-y-6">
-                {analysis ? (
-                  <>
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
-                      <div className="flex items-center justify-between mb-3">
-                        <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500">Overall Assessment</h3>
-                        <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${
-                          analysis.recommendation === 'ACCEPT' ? 'bg-emerald-100 text-emerald-700' :
-                          analysis.recommendation === 'REJECT' ? 'bg-red-100 text-red-700' :
-                          'bg-amber-100 text-amber-700'
-                        }`}>
-                          {analysis.recommendation}
-                        </span>
-                      </div>
-                      <p className="text-sm font-medium text-zinc-700">{analysis.summary}</p>
-                    </div>
-
-                    <div className="grid gap-4 sm:grid-cols-2">
-                      <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
-                        <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500 mb-3">Strengths</h3>
-                        <ul className="space-y-2">
-                          {(analysis.strengths || []).map((item, i) => (
-                            <li key={i} className="text-sm font-medium text-emerald-700 flex items-start gap-2">
-                              <span className="text-emerald-500">✓</span> {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-
-                      <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
-                        <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500 mb-3">Weaknesses</h3>
-                        <ul className="space-y-2">
-                          {(analysis.weaknesses || []).map((item, i) => (
-                            <li key={i} className="text-sm font-medium text-red-700 flex items-start gap-2">
-                              <span className="text-red-500">✗</span> {item}
-                            </li>
-                          ))}
-                        </ul>
-                      </div>
-                    </div>
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-zinc-500">
-                    No CV analysis available yet
-                  </div>
-                )}
-              </div>
-            )}
-
             {activeTab === 'investigation' && (
               <div className="space-y-6">
                 {!investigation ? (
