@@ -71,6 +71,30 @@ const getRecommendationTone = (value) => {
   return 'border-zinc-200 bg-zinc-50 text-zinc-700';
 };
 
+const getAnswerEvidence = (answer) => {
+  if (!answer) return null;
+
+  const parts = [];
+
+  if (answer.selectedOption) {
+    parts.push({ label: 'Selected option', value: answer.selectedOption });
+  }
+
+  if (answer.rawAnswer) {
+    parts.push({ label: 'Written answer', value: answer.rawAnswer });
+  }
+
+  if (answer.codeSubmission) {
+    parts.push({
+      label: answer.programmingLanguage ? `Code submission (${answer.programmingLanguage})` : 'Code submission',
+      value: answer.codeSubmission,
+      isCode: true,
+    });
+  }
+
+  return parts.length > 0 ? parts : null;
+};
+
 const PIPELINE_STAGES = [
   {
     key: 'application',
@@ -564,12 +588,6 @@ const CandidateDetail = () => {
                 <span>Back to candidates</span>
               </Link>
 
-              <div className="mt-4 flex flex-wrap items-center gap-3">
-                <span className="text-sm font-semibold text-zinc-500">
-                  {candidate.job?.title || 'No linked role'}{candidate.job?.department ? ` · ${candidate.job.department}` : ''}
-                </span>
-              </div>
-
               <h1 className="app-page-title mt-4 text-3xl text-zinc-950 sm:text-4xl">
                 {candidate.fullName}
               </h1>
@@ -579,14 +597,6 @@ const CandidateDetail = () => {
             </div>
 
             <div className="flex items-start justify-start lg:justify-end">
-              <a
-                href={`${import.meta.env.VITE_API_BASE || 'http://localhost:3001/api/v1'}/candidates/${id}/cv`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center justify-center rounded-md border border-zinc-200 bg-white px-4 text-sm font-extrabold text-zinc-700 transition hover:border-zinc-300 hover:bg-zinc-50 hover:text-black"
-              >
-                Download CV
-              </a>
               <button
                 onClick={() => setShowAiAnalysisModal(true)}
                 className="inline-flex min-h-11 items-center justify-center rounded-md bg-black px-4 text-sm font-extrabold text-white transition hover:bg-zinc-800"
@@ -677,13 +687,9 @@ const CandidateDetail = () => {
                 collapsed={collapsedSections.aiEvidence}
                 onToggle={() => toggleSection('aiEvidence')}
               >
-                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
                   <MetricTile label="Session status" value={formatStatusLabel(aiReport.session.status)} />
                   <MetricTile label="Proctor flags" value={aiReport.proctorFlagCount} />
-                  <MetricTile
-                    label="Questions"
-                    value={(aiReport.session.questions || []).length}
-                  />
                   <MetricTile
                     label="Overall score"
                     value={
@@ -712,12 +718,15 @@ const CandidateDetail = () => {
                 )}
 
                 <div className="mt-6 grid gap-3">
-                  {(aiReport.session.questions || []).map((question) => (
+                  {(aiReport.session.questions || []).map((question, index) => {
+                    const answerEvidence = getAnswerEvidence(question.latestAnswer);
+
+                    return (
                     <article key={question.id} className="rounded-md border border-zinc-200 bg-zinc-50 p-4">
                       <div className="flex flex-wrap items-start justify-between gap-3">
                         <div className="max-w-3xl">
                           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
-                            {question.type}
+                            Question {index + 1} · {question.type}
                           </p>
                           <p className="mt-2 text-sm font-semibold leading-6 text-zinc-800">{question.prompt}</p>
                         </div>
@@ -740,8 +749,36 @@ const CandidateDetail = () => {
                           </div>
                         </div>
                       </div>
+                      <div className="mt-4 rounded-md border border-zinc-200 bg-white p-4">
+                        <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
+                          Candidate answer
+                        </p>
+                        {answerEvidence ? (
+                          <div className="mt-3 grid gap-3">
+                            {answerEvidence.map((item) => (
+                              <div key={item.label}>
+                                <p className="text-xs font-extrabold uppercase tracking-[0.16em] text-zinc-400">
+                                  {item.label}
+                                </p>
+                                {item.isCode ? (
+                                  <pre className="mt-2 max-h-72 overflow-auto whitespace-pre-wrap rounded-md bg-zinc-950 p-3 text-xs font-semibold leading-5 text-zinc-100">
+                                    {item.value}
+                                  </pre>
+                                ) : (
+                                  <p className="mt-2 whitespace-pre-wrap text-sm font-semibold leading-6 text-zinc-800">
+                                    {item.value}
+                                  </p>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="mt-3 text-sm font-semibold text-zinc-500">No answer submitted.</p>
+                        )}
+                      </div>
                     </article>
-                  ))}
+                    );
+                  })}
                 </div>
               </CollapsibleDetailCard>
             )}
