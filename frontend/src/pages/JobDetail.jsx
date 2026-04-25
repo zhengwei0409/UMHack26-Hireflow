@@ -5,6 +5,7 @@ import {
   buttonPrimaryClassName,
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
+import { hasLiveCandidateStatus } from '../utils/liveStatus';
 
 const inputClassName =
   'min-h-[44px] w-full rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-black focus:ring-2 focus:ring-black/10';
@@ -105,6 +106,16 @@ const JobDetail = () => {
     loadData();
   }, [id]);
 
+  useEffect(() => {
+    if (!hasLiveCandidateStatus(candidates)) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      loadCandidateData();
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [candidates, id]);
+
   const loadData = async () => {
     try {
       const [jobRes, candidatesRes, shortlistRes] = await Promise.all([
@@ -134,6 +145,30 @@ const JobDetail = () => {
       setError(err.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadCandidateData = async () => {
+    try {
+      const [candidatesRes, shortlistRes] = await Promise.all([
+        api.candidates.list({ jobId: id }),
+        api.jobs.shortlist(id).catch(() => ({ data: [] })),
+      ]);
+
+      setCandidates(candidatesRes.data.items || []);
+      setShortlist(
+        (shortlistRes.data || []).map((session) => ({
+          id: session.candidate.id,
+          fullName: session.candidate.fullName,
+          aiInterviewScore: session.candidate.aiInterviewScore ?? session.overallScore,
+          aiInterviewRank: session.candidate.aiInterviewRank ?? session.rankPosition,
+          isShortlisted: Boolean(session.candidate.isShortlisted ?? session.isShortlisted),
+          status: session.candidate.status,
+          proctorFlagCount: session.proctorEvents?.length || 0,
+        })),
+      );
+    } catch (err) {
+      setError(err.message);
     }
   };
 

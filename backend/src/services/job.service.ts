@@ -1,3 +1,4 @@
+import { JobStatus } from '@prisma/client';
 import { prisma } from '../config/prisma';
 
 function toDate(value: string | Date) {
@@ -21,15 +22,29 @@ function isPastDeadline(date: Date) {
 }
 
 export async function syncExpiredJobs() {
+  const now = new Date();
+
   await prisma.job.updateMany({
     where: {
-      status: 'OPEN',
+      status: JobStatus.OPEN,
       closingDate: {
-        lt: new Date(),
+        lt: now,
       },
     },
     data: {
-      status: 'CLOSED',
+      status: JobStatus.CLOSED,
+    },
+  });
+
+  await prisma.job.updateMany({
+    where: {
+      status: JobStatus.CLOSED,
+      closingDate: {
+        gte: now,
+      },
+    },
+    data: {
+      status: JobStatus.OPEN,
     },
   });
 }
@@ -38,10 +53,17 @@ export async function syncExpiredJob(id: string) {
   const job = await prisma.job.findUnique({ where: { id } });
   if (!job) return null;
 
-  if (job.status === 'OPEN' && isPastDeadline(job.closingDate)) {
+  if (job.status === JobStatus.OPEN && isPastDeadline(job.closingDate)) {
     return prisma.job.update({
       where: { id },
-      data: { status: 'CLOSED' },
+      data: { status: JobStatus.CLOSED },
+    });
+  }
+
+  if (job.status === JobStatus.CLOSED && !isPastDeadline(job.closingDate)) {
+    return prisma.job.update({
+      where: { id },
+      data: { status: JobStatus.OPEN },
     });
   }
 
@@ -119,14 +141,20 @@ export async function updateJob(
   const existing = await syncExpiredJob(id);
   if (!existing) throw new Error('JOB_NOT_FOUND');
 
+  const { closingDate, ...jobData } = data;
+  let nextClosingDate: Date | undefined;
+  if (closingDate) {
+    nextClosingDate = toDate(closingDate);
+    assertValidDate(nextClosingDate);
+  }
+
   const nextData = {
-    ...data,
-    ...(data.closingDate
-      ? (() => {
-          const closingDate = toDate(data.closingDate);
-          assertValidDate(closingDate);
-          return { closingDate };
-        })()
+    ...jobData,
+    ...(nextClosingDate
+      ? {
+          closingDate: nextClosingDate,
+          status: isPastDeadline(nextClosingDate) ? JobStatus.CLOSED : JobStatus.OPEN,
+        }
       : {}),
   };
 
@@ -140,7 +168,7 @@ export async function closeJob(id: string) {
   const existing = await syncExpiredJob(id);
   if (!existing) throw new Error('JOB_NOT_FOUND');
 
-  const updated = await prisma.job.update({ where: { id }, data: { status: 'CLOSED' } });
+  const updated = await prisma.job.update({ where: { id }, data: { status: JobStatus.CLOSED } });
   const { rerankJobSessions } = await import('./ranking.service');
   await rerankJobSessions(id).catch(() => null);
   return updated;

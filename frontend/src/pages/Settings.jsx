@@ -60,7 +60,7 @@ const Settings = () => {
   return (
     <div className="max-w-4xl mx-auto p-8">
       <header className="mb-8">
-        <h1 className="text-3xl font-extrabold tracking-tight">Settings</h1>
+        <h1 className="app-page-title text-3xl text-zinc-950">Settings</h1>
         <p className="text-zinc-500 mt-2">Manage your HireFlow configurations and integrations.</p>
       </header>
 
@@ -75,7 +75,7 @@ const Settings = () => {
       <div className="space-y-8">
         <section className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-zinc-200">
-            <h2 className="text-xl font-bold">Telegram Bot Integration</h2>
+            <h2 className="app-section-title-sm text-xl text-zinc-950">Telegram Bot Integration</h2>
             <p className="text-sm text-zinc-500 mt-1">Configure your Telegram bots for candidate interaction.</p>
           </div>
           
@@ -87,7 +87,7 @@ const Settings = () => {
                 </svg>
               </div>
               <div>
-                <h4 className="text-sm font-bold text-blue-800">How to get a Telegram Bot Token?</h4>
+                <h4 className="text-sm font-extrabold text-blue-800">How to get a Telegram Bot Token?</h4>
                 <p className="text-sm text-blue-700 mt-1">
                   1. Open <a href="https://t.me/BotFather" target="_blank" rel="noopener noreferrer" className="font-bold underline">@BotFather</a> on Telegram.<br />
                   2. Send <code>/newbot</code> and follow instructions.<br />
@@ -122,7 +122,7 @@ const Settings = () => {
 
         <section className="bg-white rounded-2xl border border-zinc-200 overflow-hidden shadow-sm">
           <div className="p-6 border-b border-zinc-200">
-            <h2 className="text-xl font-bold">Bot Status</h2>
+            <h2 className="app-section-title-sm text-xl text-zinc-950">Bot Status</h2>
             <p className="text-sm text-zinc-500 mt-1">Current status of your bot integrations.</p>
           </div>
           <div className="p-6">

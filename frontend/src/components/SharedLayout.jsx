@@ -32,15 +32,6 @@ const navItems = [
     ),
   },
   {
-    to: '/ranked-shortlist',
-    label: 'Ranked Shortlist',
-    icon: (
-      <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
-        <path fill="currentColor" d="M10 2l2.4 4.8L18 7.6l-4 3.9.9 5.5L10 14.5l-4.9 2.5.9-5.5-4-3.9 5.6-.8L10 2Z" />
-      </svg>
-    ),
-  },
-  {
     to: '/bias-audit',
     label: 'Bias Audit',
     icon: (

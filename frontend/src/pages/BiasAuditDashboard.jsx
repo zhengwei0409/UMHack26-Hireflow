@@ -56,7 +56,7 @@ const BiasAuditDashboard = () => {
       <div className="mx-auto w-full max-w-7xl space-y-6">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-2xl font-extrabold tracking-tight text-zinc-950 sm:text-3xl">
+            <h1 className="app-page-title text-2xl text-zinc-950 sm:text-3xl">
               Bias Audit Dashboard
             </h1>
             <p className="mt-1 text-sm font-medium text-zinc-600">
@@ -97,7 +97,7 @@ const BiasAuditDashboard = () => {
 
             <div className="grid gap-6 lg:grid-cols-2">
               <div className="rounded-[20px] border border-zinc-200 bg-white p-6">
-                <h2 className="text-lg font-extrabold text-zinc-950">Score by Gender</h2>
+                <h2 className="app-section-title-sm text-lg text-zinc-950">Score by Gender</h2>
                 <div className="mt-4 space-y-3">
                   {Object.entries(metrics.averageScoreByGender || {}).map(([gender, score]) => (
                     <div key={gender} className="flex items-center justify-between">
@@ -117,7 +117,7 @@ const BiasAuditDashboard = () => {
               </div>
 
               <div className="rounded-[20px] border border-zinc-200 bg-white p-6">
-                <h2 className="text-lg font-extrabold text-zinc-950">Score by Name Origin</h2>
+                <h2 className="app-section-title-sm text-lg text-zinc-950">Score by Name Origin</h2>
                 <div className="mt-4 space-y-3">
                   {Object.entries(metrics.averageScoreByNameOrigin || {}).map(([origin, score]) => (
                     <div key={origin} className="flex items-center justify-between">
@@ -138,7 +138,7 @@ const BiasAuditDashboard = () => {
             </div>
 
             <div className="rounded-[20px] border border-zinc-200 bg-white p-6">
-              <h2 className="text-lg font-extrabold text-zinc-950 mb-4">Recent Bias Snapshots</h2>
+              <h2 className="app-section-title-sm mb-4 text-lg text-zinc-950">Recent Bias Snapshots</h2>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
@@ -187,7 +187,7 @@ const BiasAuditDashboard = () => {
             <svg className="mx-auto h-12 w-12 text-zinc-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <h3 className="mt-4 text-lg font-extrabold text-zinc-950">Bias Audit Dashboard</h3>
+            <h3 className="app-section-title-sm mt-4 text-lg text-zinc-950">Bias Audit Dashboard</h3>
             <p className="mt-2 text-sm font-medium text-zinc-600">
               {totalCandidates === 0
                 ? 'No candidates have applied yet. Bias data will appear here once candidates are processed.'

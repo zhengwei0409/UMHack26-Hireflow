@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { buttonBaseClassName } from '../styles/buttonStyles';
 import InDepthCVAnalysisModal from '../components/InDepthCVAnalysisModal';
+import { hasLiveCandidateStatus } from '../utils/liveStatus';
 
 const selectClassName =
   'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
@@ -297,6 +298,16 @@ const Candidates = () => {
     loadCandidates();
   }, [filters]);
 
+  useEffect(() => {
+    if (!hasLiveCandidateStatus(candidates)) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      loadCandidates({ silent: true });
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [candidates, filters]);
+
   const loadData = async () => {
     try {
       const [jobsRes] = await Promise.all([api.jobs.list()]);
@@ -306,8 +317,8 @@ const Candidates = () => {
     }
   };
 
-  const loadCandidates = async () => {
-    setLoading(true);
+  const loadCandidates = async ({ silent = false } = {}) => {
+    if (!silent) setLoading(true);
     setError('');
 
     try {
@@ -319,7 +330,7 @@ const Candidates = () => {
     } catch (err) {
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 

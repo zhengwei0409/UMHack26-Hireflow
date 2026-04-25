@@ -8,6 +8,7 @@ import {
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
 import CvEvaluationModal from '../components/CvEvaluationModal';
+import { isLiveCandidateStatus } from '../utils/liveStatus';
 
 const STATUS_ACTIONS = {
   CV_UNDER_REVIEW: [
@@ -362,6 +363,16 @@ const CandidateDetail = () => {
   useEffect(() => {
     loadData();
   }, [id]);
+
+  useEffect(() => {
+    if (!isLiveCandidateStatus(candidate?.status)) return undefined;
+
+    const intervalId = window.setInterval(() => {
+      loadData();
+    }, 5000);
+
+    return () => window.clearInterval(intervalId);
+  }, [candidate?.status, id]);
 
   const loadData = async () => {
     try {
