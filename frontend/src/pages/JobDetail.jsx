@@ -5,24 +5,10 @@ import {
   buttonPrimaryClassName,
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
+import { formatDate, formatInputDate as toInputDate } from '../utils/dateFormat';
 
 const inputClassName =
   'min-h-[44px] w-full rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-black focus:ring-2 focus:ring-black/10';
-
-const formatDate = (date) => {
-  if (!date) return 'No date';
-
-  return new Date(date).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
-
-const toInputDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toISOString().slice(0, 10);
-};
 
 const isShortlistFinal = (job) => {
   if (!job?.closingDate) return false;
@@ -548,7 +534,7 @@ const JobDetail = () => {
                         <StatusBadge status={candidate.status} />
                       </td>
                       <td className="px-4 py-4 text-sm font-semibold text-zinc-600">
-                        {candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : '-'}
+                        {formatDate(candidate.createdAt, '-')}
                       </td>
                       <td className="px-4 py-4 text-right">
                         <Link

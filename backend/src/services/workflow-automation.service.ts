@@ -246,17 +246,42 @@ export async function onRejectInterview(candidateId: string): Promise<void> {
 export async function confirmInterview(candidateId: string, candidateEmail: string): Promise<void> {
   const candidate = await getCandidateWithRelations(candidateId);
 
-  if (candidate.email !== candidateEmail) {
+  if (candidate.email.toLowerCase() !== candidateEmail.trim().toLowerCase()) {
     throw new Error('UNAUTHORIZED');
   }
 
-  await transitionCandidateStatus({
-    candidateId,
-    fromStatus: STATES.INTERVIEW_SCHEDULED,
-    toStatus: STATES.INTERVIEW_CONFIRMED,
-    event: 'INTERVIEW_CONFIRMED',
-    triggeredBy: 'CANDIDATE',
+  if (candidate.status === STATES.INTERVIEW_CONFIRMED) {
+    return;
+  }
+
+  if (candidate.status !== STATES.INTERVIEW_SCHEDULED) {
+    throw new Error('INVALID_STATE_FOR_ACTION');
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.candidate.updateMany({
+      where: { id: candidateId, status: STATES.INTERVIEW_SCHEDULED as any },
+      data: { status: STATES.INTERVIEW_CONFIRMED as any },
+    });
+
+    if (result.count === 0) return false;
+
+    await tx.statusHistory.create({
+      data: {
+        candidateId,
+        fromStatus: STATES.INTERVIEW_SCHEDULED,
+        toStatus: STATES.INTERVIEW_CONFIRMED,
+        event: 'INTERVIEW_CONFIRMED',
+        triggeredBy: 'CANDIDATE',
+      },
+    });
+
+    return true;
   });
+
+  if (!updated) {
+    return;
+  }
 
   await emailService.notifyHRInterviewConfirmed(
     { fullName: candidate.fullName, email: candidate.email, job: { title: candidate.job.title } },
@@ -275,18 +300,43 @@ export async function requestReschedule(
 ): Promise<void> {
   const candidate = await getCandidateWithRelations(candidateId);
 
-  if (candidate.email !== candidateEmail) {
+  if (candidate.email.toLowerCase() !== candidateEmail.trim().toLowerCase()) {
     throw new Error('UNAUTHORIZED');
   }
 
-  await transitionCandidateStatus({
-    candidateId,
-    fromStatus: STATES.INTERVIEW_SCHEDULED,
-    toStatus: STATES.INTERVIEW_RESCHEDULE_REQUESTED,
-    event: 'INTERVIEW_RESCHEDULE_REQUESTED',
-    triggeredBy: 'CANDIDATE',
-    metadata: reason ? ({ reason } as Prisma.InputJsonValue) : undefined,
+  if (candidate.status === STATES.INTERVIEW_RESCHEDULE_REQUESTED) {
+    return;
+  }
+
+  if (candidate.status !== STATES.INTERVIEW_SCHEDULED) {
+    throw new Error('INVALID_STATE_FOR_ACTION');
+  }
+
+  const updated = await prisma.$transaction(async (tx) => {
+    const result = await tx.candidate.updateMany({
+      where: { id: candidateId, status: STATES.INTERVIEW_SCHEDULED as any },
+      data: { status: STATES.INTERVIEW_RESCHEDULE_REQUESTED as any },
+    });
+
+    if (result.count === 0) return false;
+
+    await tx.statusHistory.create({
+      data: {
+        candidateId,
+        fromStatus: STATES.INTERVIEW_SCHEDULED,
+        toStatus: STATES.INTERVIEW_RESCHEDULE_REQUESTED,
+        event: 'INTERVIEW_RESCHEDULE_REQUESTED',
+        triggeredBy: 'CANDIDATE',
+        metadata: reason ? ({ reason } as Prisma.InputJsonValue) : undefined,
+      },
+    });
+
+    return true;
   });
+
+  if (!updated) {
+    return;
+  }
 
   await emailService.notifyHRRescheduleRequest(
     { fullName: candidate.fullName, email: candidate.email, job: { title: candidate.job.title } },

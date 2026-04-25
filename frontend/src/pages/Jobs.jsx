@@ -7,6 +7,7 @@ import {
   buttonPrimaryClassName,
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
+import { formatDate } from '../utils/dateFormat';
 
 const inputClassName =
   'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
@@ -48,16 +49,6 @@ const CollapseIcon = ({ collapsed }) => (
 );
 
 const getApplicantCount = (job) => Number(job._count?.candidates || job.candidateCount || 0);
-
-const formatDate = (date) => {
-  if (!date) return 'No date';
-
-  return new Date(date).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
 
 const isDeadlineClosed = (job) => {
   if (!job?.closingDate) return false;

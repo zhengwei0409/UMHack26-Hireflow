@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../services/api';
+import { formatDate } from '../utils/dateFormat';
 
 const BiasAuditDashboard = () => {
   const [metrics, setMetrics] = useState(null);
@@ -170,7 +171,7 @@ const BiasAuditDashboard = () => {
                         </td>
                         <td className="py-3 text-sm text-zinc-600">{snapshot.triggerType}</td>
                         <td className="py-3 text-sm text-zinc-500">
-                          {new Date(snapshot.createdAt).toLocaleDateString()}
+                          {formatDate(snapshot.createdAt)}
                         </td>
                       </tr>
                     ))}

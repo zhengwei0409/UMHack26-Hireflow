@@ -157,6 +157,9 @@ export async function confirmInterview(req: Request<{ id: string }>, res: Respon
     if (err.message === 'UNAUTHORIZED') {
       return res.status(403).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Email does not match' } });
     }
+    if (err.message === 'INVALID_STATE_FOR_ACTION') {
+      return res.status(409).json({ success: false, error: { code: 'INVALID_STATE_FOR_ACTION', message: 'This interview response is no longer available' } });
+    }
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }
 }
@@ -178,6 +181,9 @@ export async function requestReschedule(req: Request<{ id: string }>, res: Respo
     }
     if (err.message === 'UNAUTHORIZED') {
       return res.status(403).json({ success: false, error: { code: 'UNAUTHORIZED', message: 'Email does not match' } });
+    }
+    if (err.message === 'INVALID_STATE_FOR_ACTION') {
+      return res.status(409).json({ success: false, error: { code: 'INVALID_STATE_FOR_ACTION', message: 'This interview response is no longer available' } });
     }
     return res.status(500).json({ success: false, error: { code: 'INTERNAL_ERROR', message: 'Something went wrong' } });
   }

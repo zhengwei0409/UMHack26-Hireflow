@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { buttonBaseClassName } from '../styles/buttonStyles';
 import InDepthCVAnalysisModal from '../components/InDepthCVAnalysisModal';
+import { formatDate } from '../utils/dateFormat';
 
 const selectClassName =
   'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
@@ -216,7 +217,7 @@ const CandidateRow = ({ candidate, index = 0, hideRank = false, hideRadar = fals
   const score = getNumericScore(candidate);
   const radar = getCandidateRadar(candidate);
   const rank = candidate.aiInterviewRank ? `#${candidate.aiInterviewRank} for this job` : 'No rank yet';
-  const appliedDate = candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : 'No date';
+  const appliedDate = formatDate(candidate.createdAt);
 
   return (
     <article

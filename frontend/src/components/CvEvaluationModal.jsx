@@ -4,7 +4,6 @@ import api from '../services/api';
 const CvEvaluationModal = ({ candidateId, isOpen, onClose, onUpdated }) => {
   const [loading, setLoading] = useState(false);
   const [investigation, setInvestigation] = useState(null);
-  const [activeTab, setActiveTab] = useState('investigation');
 
   useEffect(() => {
     if (isOpen && candidateId) {
@@ -39,14 +38,18 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose, onUpdated }) => {
 
   if (!isOpen) return null;
 
+  const verifiedSkills = investigation?.claimsVerified?.verifiedSkills || [];
+  const unverifiedSkills = investigation?.claimsVerified?.unverifiedSkills || [];
+  const claimedSkills = investigation?.claimsVerified?.claimedSkills || [];
+  const projectVerification = investigation?.projectVerification;
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6" onClick={onClose}>
       <div className="w-full max-w-3xl rounded-[28px] border border-zinc-200 bg-white p-6 shadow-xl sm:p-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Public profile check</p>
-            <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-zinc-950">Profile verification</h2>
-            <p className="mt-1 text-sm font-medium text-zinc-600">Verify CV links, GitHub signals, and LinkedIn URL evidence.</p>
+            <h2 className="app-section-title-sm text-2xl text-zinc-950">Profile verification</h2>
+            <p className="mt-1 text-sm font-medium text-zinc-600">Checks the candidate's public profiles and matches resume projects with GitHub repositories.</p>
           </div>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -55,52 +58,34 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose, onUpdated }) => {
           </button>
         </div>
 
-        <div className="mb-4 flex gap-2 border-b border-zinc-200">
-          {['investigation', 'skills'].map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-4 py-2 text-sm font-semibold capitalize transition ${
-                activeTab === tab
-                  ? 'border-b-2 border-black text-black'
-                  : 'text-zinc-500 hover:text-zinc-700'
-              }`}
-            >
-              {tab === 'investigation' ? 'Investigation' : 'Skills Verification'}
-            </button>
-          ))}
-        </div>
-
         {loading ? (
           <div className="py-12 text-center">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-black mx-auto"></div>
             <p className="mt-4 text-sm font-medium text-zinc-500">Loading verification...</p>
           </div>
         ) : (
-          <>
-            {activeTab === 'investigation' && (
-              <div className="space-y-6">
-                {!investigation ? (
-                  <div className="text-center py-8">
-                    <p className="text-zinc-500 mb-4">Run background investigation to verify candidate claims</p>
-                    <button
-                      onClick={runInvestigation}
-                      className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-extrabold text-white hover:bg-zinc-800"
-                    >
-                      Start Profile Check
-                    </button>
-                  </div>
-                ) : (
-                  <>
-                    <div className="flex justify-end">
-                      <button
-                        onClick={runInvestigation}
-                        disabled={loading}
-                        className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3.5 py-2 text-sm font-extrabold text-zinc-900 hover:bg-zinc-50 disabled:opacity-50"
-                      >
-                        Run Again
-                      </button>
-                    </div>
+          <div className="space-y-6 border-t border-zinc-200 pt-6">
+            {!investigation ? (
+              <div className="text-center py-8">
+                <p className="text-zinc-500 mb-4">Run background investigation to verify candidate claims</p>
+                <button
+                  onClick={runInvestigation}
+                  className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-extrabold text-white hover:bg-zinc-800"
+                >
+                  Start Profile Check
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="flex justify-end">
+                  <button
+                    onClick={runInvestigation}
+                    disabled={loading}
+                    className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3.5 py-2 text-sm font-extrabold text-zinc-900 hover:bg-zinc-50 disabled:opacity-50"
+                  >
+                    Run Again
+                  </button>
+                </div>
 
                     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
                       <div className="flex items-center justify-between mb-3">
@@ -142,7 +127,7 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose, onUpdated }) => {
                           <div className="space-y-2 text-sm">
                             <p className="font-medium text-emerald-700 flex items-center gap-2">
                               <span className="text-emerald-500">✓</span>
-                              {investigation.linkedinData.headline || investigation.linkedinData.company ? 'Verified' : 'Profile URL found'}
+                              Profile URL found
                             </p>
                             {investigation.linkedinData.profileUrl && (
                               <a
@@ -154,8 +139,6 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose, onUpdated }) => {
                                 {investigation.linkedinData.profileUrl}
                               </a>
                             )}
-                            <p className="text-zinc-600">Company: {investigation.linkedinData.company || 'N/A'}</p>
-                            <p className="text-zinc-600">Connections: {investigation.linkedinData.connections || 'N/A'}</p>
                           </div>
                         ) : (
                           <p className="text-sm text-red-600 flex items-center gap-2">
@@ -164,6 +147,93 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose, onUpdated }) => {
                         )}
                       </div>
                     </div>
+
+                    {projectVerification && (
+                      <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+                          <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500">Project Match Analysis</h3>
+                          <span className="rounded-full bg-zinc-100 px-3 py-1 text-xs font-bold uppercase text-zinc-600">
+                            {projectVerification.confidence || 'low'} confidence
+                          </span>
+                        </div>
+                        <p className="text-sm font-medium leading-6 text-zinc-700">{projectVerification.summary}</p>
+
+                        {projectVerification.matches?.length > 0 && (
+                          <div className="mt-4 space-y-3">
+                            {projectVerification.matches.map((match, i) => (
+                              <div key={`${match.resumeProject}-${match.githubRepo}-${i}`} className="rounded-xl border border-emerald-200 bg-emerald-50 p-4">
+                                <p className="text-sm font-extrabold text-emerald-800">
+                                  {match.resumeProject} → {match.githubRepo}
+                                </p>
+                                <p className="mt-1 text-sm font-medium leading-5 text-emerald-700">{match.evidence}</p>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
+                        {projectVerification.gaps?.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="text-xs font-extrabold uppercase tracking-[0.16em] text-amber-700">Gaps</h4>
+                            <ul className="mt-2 space-y-2">
+                              {projectVerification.gaps.map((gap, i) => (
+                                <li key={i} className="text-sm font-medium leading-5 text-amber-700">
+                                  {gap}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                        {projectVerification.conflicts?.length > 0 && (
+                          <div className="mt-4">
+                            <h4 className="text-xs font-extrabold uppercase tracking-[0.16em] text-red-700">Conflicts</h4>
+                            <ul className="mt-2 space-y-2">
+                              {projectVerification.conflicts.map((conflict, i) => (
+                                <li key={i} className="text-sm font-medium leading-5 text-red-700">
+                                  {conflict}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                {investigation.claimsVerified && (
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
+                      <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500 mb-3">Skills Found in CV</h3>
+                      {verifiedSkills.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {verifiedSkills.map((skill, i) => (
+                            <span key={i} className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
+                              ✓ {skill}
+                            </span>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-sm font-medium text-zinc-500">
+                          {claimedSkills.length > 0
+                            ? 'No skills were verified from the CV text yet.'
+                            : 'No skills were found in the existing investigation result. Run again to refresh skill extraction.'}
+                        </p>
+                      )}
+                    </div>
+
+                    {unverifiedSkills.length > 0 && (
+                      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
+                        <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-amber-700 mb-3">Unverified Skills</h3>
+                        <div className="flex flex-wrap gap-2">
+                          {unverifiedSkills.map((skill, i) => (
+                            <span key={i} className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
+                              ? {skill}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
 
                     {investigation.redFlags?.length > 0 && (
                       <div className="rounded-2xl border border-red-200 bg-red-50 p-5">
@@ -177,47 +247,9 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose, onUpdated }) => {
                         </ul>
                       </div>
                     )}
-                  </>
-                )}
-              </div>
+              </>
             )}
-
-            {activeTab === 'skills' && (
-              <div className="space-y-6">
-                {investigation?.claimsVerified ? (
-                  <>
-                    <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
-                      <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500 mb-3">Verified Skills</h3>
-                      <div className="flex flex-wrap gap-2">
-                        {investigation.claimsVerified.verifiedSkills.map((skill, i) => (
-                          <span key={i} className="px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-sm font-medium">
-                            ✓ {skill}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-
-                    {investigation.claimsVerified.unverifiedSkills.length > 0 && (
-                      <div className="rounded-2xl border border-amber-200 bg-amber-50 p-5">
-                        <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-amber-700 mb-3">Unverified Skills</h3>
-                        <div className="flex flex-wrap gap-2">
-                          {investigation.claimsVerified.unverifiedSkills.map((skill, i) => (
-                            <span key={i} className="px-3 py-1 bg-amber-100 text-amber-700 rounded-full text-sm font-medium">
-                              ? {skill}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <div className="text-center py-8 text-zinc-500">
-                    Run investigation to verify skills
-                  </div>
-                )}
-              </div>
-            )}
-          </>
+          </div>
         )}
       </div>
     </div>

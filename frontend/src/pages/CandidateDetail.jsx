@@ -9,6 +9,7 @@ import {
 } from '../styles/buttonStyles';
 import CvEvaluationModal from '../components/CvEvaluationModal';
 import { isLiveCandidateStatus } from '../utils/liveStatus';
+import { formatDate, formatDateTime } from '../utils/dateFormat';
 
 const STATUS_ACTIONS = {
   CV_UNDER_REVIEW: [
@@ -357,7 +358,6 @@ const VerificationPreview = ({ candidate, onOpen }) => {
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Profile verification</p>
-          <h2 className="mt-1 text-xl font-black tracking-tight text-zinc-950">{overview.verificationScore}</h2>
         </div>
         <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${overview.tone}`}>
           {overview.status}
@@ -379,12 +379,12 @@ const VerificationPreview = ({ candidate, onOpen }) => {
       <button
         type="button"
         onClick={onOpen}
-        className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-md bg-black px-4 text-sm font-extrabold text-white transition hover:bg-zinc-800"
+        className="mt-4 inline-flex min-h-10 w-full cursor-pointer items-center justify-center rounded-md bg-black px-4 text-sm font-extrabold text-white transition hover:bg-zinc-800"
       >
         {overview.cta}
       </button>
       <p className="mt-3 text-xs font-medium leading-5 text-zinc-500">
-        Uses CV links, GitHub API, and LinkedIn URL detection. LinkedIn crawling stays off by default.
+        Checks the GitHub and LinkedIn links from the CV, then compares resume projects with public GitHub repositories.
       </p>
     </section>
   );
@@ -643,7 +643,7 @@ const CandidateDetail = () => {
     if (!candidate) return [];
 
     return [
-      { label: 'Applied', value: candidate.createdAt ? new Date(candidate.createdAt).toLocaleDateString() : '-' },
+      { label: 'Applied', value: formatDate(candidate.createdAt, '-') },
       { label: 'CV score', value: candidate.glmScore !== null && candidate.glmScore !== undefined ? `${candidate.glmScore}/100` : '-' },
       {
         label: 'Interview score',
@@ -919,7 +919,7 @@ const CandidateDetail = () => {
                         {item.from || 'START'} → {item.to}
                       </p>
                       <p className="mt-2 text-sm font-medium text-zinc-600">
-                        by {item.triggeredBy} · {new Date(item.at).toLocaleString()}
+                        by {item.triggeredBy} · {formatDateTime(item.at, '-')}
                       </p>
                     </article>
                   ))}
@@ -989,8 +989,7 @@ const CandidateDetail = () => {
 
             <section className="rounded-md border border-red-200 bg-white p-6 shadow-sm">
               <div className="mb-5">
-                <h2 className="app-section-title-sm text-xl text-zinc-950">Danger zone</h2>
-                <p className="mt-2 text-sm font-medium leading-6 text-zinc-600">
+                <p className="text-sm font-medium leading-6 text-zinc-600">
                   Delete this candidate and all associated workflow data.
                 </p>
               </div>

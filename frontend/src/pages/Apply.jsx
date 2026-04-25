@@ -2,22 +2,13 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import api from '../services/api';
 import { buttonPrimaryClassName } from '../styles/buttonStyles';
+import { formatDate } from '../utils/dateFormat';
 
 const inputClassName =
   'min-h-[46px] w-full rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-medium text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-black focus:ring-2 focus:ring-black/10';
 
 const fileInputClassName =
   'block w-full cursor-pointer rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm font-semibold text-zinc-600 transition duration-200 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-black file:px-3.5 file:py-2 file:text-sm file:font-extrabold file:text-white file:shadow-sm file:transition file:duration-200 hover:-translate-y-0.5 hover:border-zinc-400 hover:bg-white hover:file:-translate-y-0.5 hover:file:bg-zinc-800 hover:file:shadow-[0_10px_22px_rgba(24,24,27,0.18)] active:translate-y-0 active:file:translate-y-0 active:file:scale-[0.97] focus-within:border-black focus-within:ring-2 focus-within:ring-black/10';
-
-const formatDate = (date) => {
-  if (!date) return 'No date';
-
-  return new Date(date).toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  });
-};
 
 const isJobClosed = (job) => {
   if (!job) return false;

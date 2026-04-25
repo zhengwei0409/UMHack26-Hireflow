@@ -158,6 +158,10 @@ export async function sendInterviewSchedule(
   interviewDetails: { date: string; time: string; location: string; meetingLink?: string }
 ): Promise<boolean> {
   const subject = `Interview Scheduled - ${job.title} Position`;
+  const appUrl = process.env.APP_URL || 'http://localhost:5173';
+  const candidateEmail = encodeURIComponent(candidate.email);
+  const confirmUrl = `${appUrl}/interview/confirm/${candidate.candidateId}?email=${candidateEmail}`;
+  const rescheduleUrl = `${appUrl}/interview/reschedule/${candidate.candidateId}?email=${candidateEmail}`;
 
   const html = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -174,8 +178,8 @@ export async function sendInterviewSchedule(
       
       <p>Please confirm your attendance by clicking one of the links below:</p>
       <p>
-        <a href="${process.env.APP_URL || 'http://localhost:5173'}/interview/confirm/${candidate.candidateId}" style="background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-right: 10px;">Confirm</a>
-        <a href="${process.env.APP_URL || 'http://localhost:5173'}/interview/reschedule/${candidate.candidateId}" style="background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Request Reschedule</a>
+        <a href="${confirmUrl}" style="background: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-right: 10px;">Confirm</a>
+        <a href="${rescheduleUrl}" style="background: #f59e0b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px;">Request Reschedule</a>
       </p>
       
       <p>Or reply to this email with your response.</p>

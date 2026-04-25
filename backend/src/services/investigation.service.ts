@@ -8,6 +8,12 @@ import path from 'path';
 
 const CRAWL4AI_API_URL = process.env.CRAWL4AI_API_URL || 'http://localhost:11235';
 const ENABLE_LINKEDIN_CRAWL = process.env.ENABLE_LINKEDIN_CRAWL === 'true';
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+
+const githubHeaders = () => ({
+  Accept: 'application/vnd.github.v3+json',
+  ...(GITHUB_TOKEN ? { Authorization: `Bearer ${GITHUB_TOKEN}` } : {}),
+});
 
 export interface InvestigationResult {
   githubVerified: boolean;
@@ -15,6 +21,7 @@ export interface InvestigationResult {
   githubData: GitHubData | null;
   linkedinData: LinkedinData | null;
   claimsVerified: ClaimsVerification;
+  projectVerification?: ProjectVerification;
   redFlags: string[];
   overallScore: number;
   recommendation: 'ACCEPT' | 'REVIEW' | 'REJECT';
@@ -50,6 +57,19 @@ export interface ClaimsVerification {
   verifiedSkills: string[];
   unverifiedSkills: string[];
   skillEvidence: Record<string, string[]>;
+}
+
+export interface ProjectVerification {
+  summary: string;
+  confidence: 'high' | 'medium' | 'low';
+  matches: Array<{
+    resumeProject: string;
+    githubRepo: string;
+    evidence: string;
+    confidence: 'high' | 'medium' | 'low';
+  }>;
+  gaps: string[];
+  conflicts: string[];
 }
 
 export interface ExtractedLink {
@@ -148,7 +168,7 @@ function extractLinkedinUsername(url: string): string | null {
 async function fetchGitHubProfile(username: string): Promise<GitHubData> {
   try {
     const response = await fetch(`https://api.github.com/users/${username}`, {
-      headers: { Accept: 'application/vnd.github.v3+json' },
+      headers: githubHeaders(),
     });
 
     if (!response.ok) {
@@ -208,8 +228,8 @@ async function fetchGitHubProfile(username: string): Promise<GitHubData> {
 
 async function fetchGitHubRepos(username: string): Promise<string[]> {
   try {
-    const response = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=6`, {
-      headers: { Accept: 'application/vnd.github.v3+json' },
+    const response = await fetch(`https://api.github.com/users/${username}/repos?sort=updated&per_page=50`, {
+      headers: githubHeaders(),
     });
 
     if (!response.ok) return [];
@@ -389,37 +409,79 @@ async function loadCvText(cvFilePath: string): Promise<string> {
   }
 }
 
+const SKILL_PATTERNS: Record<string, string[]> = {
+  javascript: ['javascript', 'js', 'ecmascript'],
+  typescript: ['typescript', 'ts'],
+  python: ['python', 'py'],
+  java: ['java'],
+  react: ['react', 'reactjs', 'react.js'],
+  nodejs: ['node', 'node.js', 'nodejs'],
+  'node.js': ['node', 'node.js', 'nodejs'],
+  express: ['express', 'express.js', 'expressjs'],
+  'express.js': ['express', 'express.js', 'expressjs'],
+  mongodb: ['mongodb', 'mongo db'],
+  mongoose: ['mongoose'],
+  sql: ['sql', 'mysql', 'postgresql', 'postgres'],
+  mysql: ['mysql'],
+  jdbc: ['jdbc'],
+  aws: ['aws', 'amazon web services', 'ec2', 's3'],
+  docker: ['docker', 'container'],
+  kubernetes: ['kubernetes', 'k8s'],
+  git: ['git', 'github', 'gitlab'],
+  github: ['github'],
+  'rest api': ['rest api', 'restful api', 'restful apis'],
+  'mern stack': ['mern', 'mern stack'],
+  firebase: ['firebase'],
+  'google maps api': ['google maps api', 'maps api'],
+  'places api': ['places api'],
+  'chart.js': ['chart.js', 'chartjs'],
+  'java swing': ['java swing', 'swing'],
+  'machine learning': ['machine learning', 'ml', 'deep learning', 'ai'],
+  'data analysis': ['data analysis', 'analytics', 'pandas', 'numpy'],
+  html: ['html'],
+  css: ['css'],
+  tailwind: ['tailwind', 'tailwind css'],
+};
+
+const normalizeSkillText = (value: string) => ` ${value.toLowerCase().replace(/[^a-z0-9]+/g, ' ')} `;
+const compactSkillText = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, '');
+const COMPACT_MATCH_PATTERNS = new Set([
+  'jdbc',
+  'mysql',
+  'mongodb',
+  'mongoose',
+  'mern',
+  'restapi',
+  'restfulapi',
+  'expressjs',
+  'nodejs',
+  'chartjs',
+  'googlemapsapi',
+  'placesapi',
+]);
+
+function hasSkillPattern(text: string, pattern: string) {
+  const normalizedPattern = normalizeSkillText(pattern).trim();
+  if (normalizeSkillText(text).includes(` ${normalizedPattern} `)) return true;
+
+  const compactPattern = compactSkillText(pattern);
+  return COMPACT_MATCH_PATTERNS.has(compactPattern) && compactSkillText(text).includes(compactPattern);
+}
+
 function analyzeSkills(cvText: string, claimedSkills: string[]): ClaimsVerification {
-  const normalizedCV = cvText.toLowerCase();
   const verifiedSkills: string[] = [];
   const unverifiedSkills: string[] = [];
   const skillEvidence: Record<string, string[]> = {};
 
-  const skillPatterns: Record<string, string[]> = {
-    javascript: ['javascript', 'js', 'ecmascript'],
-    typescript: ['typescript', 'ts'],
-    python: ['python', 'py'],
-    java: [' java ', 'java '],
-    react: ['react', 'reactjs', 'react.js'],
-    nodejs: ['node', 'node.js', 'nodejs'],
-    sql: ['sql', 'mysql', 'postgresql', 'postgres'],
-    aws: ['aws', 'amazon web services', 'ec2', 's3'],
-    docker: ['docker', 'container'],
-    kubernetes: ['kubernetes', 'k8s'],
-    git: ['git', 'github', 'gitlab'],
-    'machine learning': ['machine learning', 'ml', 'deep learning', 'ai'],
-    'data analysis': ['data analysis', 'analytics', 'pandas', 'numpy'],
-  };
-
   for (const skill of claimedSkills) {
     const normalizedSkill = skill.toLowerCase();
-    const patterns = skillPatterns[normalizedSkill] || [normalizedSkill];
+    const patterns = SKILL_PATTERNS[normalizedSkill] || [normalizedSkill];
 
     let found = false;
     const evidence: string[] = [];
 
     for (const pattern of patterns) {
-      if (normalizedCV.includes(pattern)) {
+      if (hasSkillPattern(cvText, pattern)) {
         found = true;
         evidence.push(`Found "${pattern}" in CV`);
       }
@@ -435,6 +497,439 @@ function analyzeSkills(cvText: string, claimedSkills: string[]): ClaimsVerificat
   }
 
   return { claimedSkills, verifiedSkills, unverifiedSkills, skillEvidence };
+}
+
+function collectTextValues(value: unknown): string[] {
+  if (typeof value === 'string') return [value];
+  if (Array.isArray(value)) return value.flatMap(collectTextValues);
+  if (!value || typeof value !== 'object') return [];
+  return Object.values(value as Record<string, unknown>).flatMap(collectTextValues);
+}
+
+function extractKnownSkillsFromText(text: string): string[] {
+  return Object.entries(SKILL_PATTERNS)
+    .filter(([, patterns]) => patterns.some((pattern) => hasSkillPattern(text, pattern)))
+    .map(([skill]) => skill);
+}
+
+function formatSkillName(skill: string) {
+  const displayNames: Record<string, string> = {
+    javascript: 'JavaScript',
+    typescript: 'TypeScript',
+    nodejs: 'Node.js',
+    'node.js': 'Node.js',
+    express: 'Express.js',
+    'express.js': 'Express.js',
+    mongodb: 'MongoDB',
+    mysql: 'MySQL',
+    aws: 'AWS',
+    jdbc: 'JDBC',
+    'rest api': 'REST API',
+    'mern stack': 'MERN Stack',
+    'google maps api': 'Google Maps API',
+    'places api': 'Places API',
+    'chart.js': 'Chart.js',
+    'java swing': 'Java Swing',
+    html: 'HTML',
+    css: 'CSS',
+  };
+
+  return displayNames[skill] || skill.replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function extractClaimedSkills(glmAnalysis: unknown, cvText: string): string[] {
+  const skills = (glmAnalysis as { skills?: unknown })?.skills;
+  const claimedSkills = Array.isArray(skills) ? skills.flatMap((entry) => {
+    if (typeof entry === 'string') return [entry];
+
+    const items = (entry as { items?: unknown })?.items;
+    if (Array.isArray(items)) {
+      return items.filter((item): item is string => typeof item === 'string');
+    }
+
+    return [];
+  }) : [];
+
+  const analysis = glmAnalysis as {
+    summary?: unknown;
+    strengths?: unknown;
+    skills?: unknown;
+    projects?: unknown;
+    skillMatches?: unknown;
+  };
+  const analysisText = [
+    collectTextValues(analysis.summary),
+    collectTextValues(analysis.strengths),
+    collectTextValues(analysis.skills),
+    collectTextValues(analysis.projects),
+    collectTextValues(analysis.skillMatches),
+  ].flat().join(' ');
+  const fallbackSkills = extractKnownSkillsFromText(`${analysisText} ${cvText}`).map(formatSkillName);
+
+  return [...new Set([...claimedSkills, ...fallbackSkills].map((skill) => skill.trim()).filter(Boolean))];
+}
+
+type ResumeProject = {
+  name: string;
+  description: string;
+  technologies: string[];
+};
+
+type GitHubRepoEvidence = {
+  name: string;
+  description: string;
+  languages: string[];
+  frameworks: string[];
+};
+
+type GitHubRepoSummary = {
+  name: string;
+  language: string | null;
+  description: string | null;
+};
+
+const normalizeMatchText = (value: string) =>
+  value
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/g, '');
+
+function extractResumeProjects(glmAnalysis: unknown): ResumeProject[] {
+  const projects = (glmAnalysis as { projects?: unknown })?.projects;
+  if (!Array.isArray(projects)) return [];
+
+  return projects
+    .map((project) => {
+      if (!project || typeof project !== 'object') return null;
+      const item = project as {
+        name?: unknown;
+        description?: unknown;
+        technologies?: unknown;
+      };
+
+      const name = typeof item.name === 'string' ? item.name.trim() : '';
+      if (!name) return null;
+
+      return {
+        name,
+        description: typeof item.description === 'string' ? item.description : '',
+        technologies: Array.isArray(item.technologies)
+          ? item.technologies.filter((tech): tech is string => typeof tech === 'string')
+          : [],
+      };
+    })
+    .filter((project): project is ResumeProject => Boolean(project));
+}
+
+function extractResumeProjectsFromCvText(cvText: string): ResumeProject[] {
+  const projectsSection = cvText.match(/projects\s*([\s\S]*?)(experience|extracurricular|education|skills|$)/i)?.[1];
+  if (!projectsSection) return [];
+
+  const projectNames = [...projectsSection.matchAll(/(?:^|\n)\s*([^|\n]{3,80})\|/g)]
+    .map((match) => match[1].replace(/[•\n\r]/g, ' ').trim())
+    .filter(Boolean);
+
+  return [...new Set(projectNames)].map((name) => {
+    const escapedName = name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const nextProjectPattern = projectNames
+      .filter((projectName) => projectName !== name)
+      .map((projectName) => projectName.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'))
+      .join('|');
+    const descriptionMatch = projectsSection.match(
+      new RegExp(`${escapedName}[\\s\\S]*?(?=${nextProjectPattern ? `\\n\\s*(?:${nextProjectPattern})\\|` : '$'}|$)`, 'i')
+    );
+    const description = descriptionMatch?.[0]?.replace(/\s+/g, ' ').trim() || '';
+    const technologies = [
+      'React',
+      'Node.js',
+      'Express.js',
+      'MongoDB',
+      'Mongoose',
+      'Gemini',
+      'Chart.js',
+      'Java',
+      'Firebase',
+      'Google Maps API',
+      'Places API',
+      'Java Swing',
+      'MySQL',
+      'JDBC',
+      'SQL',
+    ].filter((tech) => description.toLowerCase().includes(tech.toLowerCase()));
+
+    return { name, description, technologies };
+  });
+}
+
+async function fetchGitHubJson<T>(url: string): Promise<T | null> {
+  try {
+    const response = await fetch(url, {
+      headers: githubHeaders(),
+    });
+    if (!response.ok) return null;
+    return await response.json() as T;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchRepoDependencyEvidence(username: string, repoName: string): Promise<string[]> {
+  const files = [
+    'package.json',
+    'frontend/package.json',
+    'backend/package.json',
+    'client/package.json',
+    'server/package.json',
+    'README.md',
+  ];
+  const evidence = new Set<string>();
+
+  for (const file of files) {
+    const data = await fetchGitHubJson<{ content?: string; encoding?: string }>(
+      `https://api.github.com/repos/${username}/${repoName}/contents/${file}`
+    );
+    if (!data?.content || data.encoding !== 'base64') continue;
+
+    const text = Buffer.from(data.content, 'base64').toString('utf-8').toLowerCase();
+    [
+      'react',
+      'node',
+      'express',
+      'mongodb',
+      'mongoose',
+      'chart.js',
+      'gemini',
+      'firebase',
+      'mysql',
+      'jdbc',
+      'java swing',
+    ].forEach((keyword) => {
+      if (text.includes(keyword)) evidence.add(keyword);
+    });
+  }
+
+  return [...evidence];
+}
+
+async function fetchGitHubRepoEvidence(username: string): Promise<GitHubRepoEvidence[]> {
+  const repos = await fetchGitHubJson<GitHubRepoSummary[]>(
+    `https://api.github.com/users/${username}/repos?sort=updated&per_page=50`
+  );
+  if (!repos) return [];
+
+  return Promise.all(
+    repos.map(async (repo) => {
+      const languages = repo.language ? [repo.language] : [];
+      const frameworks = await fetchRepoDependencyEvidence(username, repo.name);
+      return {
+        name: repo.name,
+        description: repo.description || '',
+        languages,
+        frameworks,
+      };
+    })
+  );
+}
+
+function normalizeGitHubRepoEvidence(githubData: GitHubData | null): GitHubRepoEvidence[] {
+  if (!githubData?.exists) return [];
+
+  const reposFromDetails = (githubData.repoDetails || []).map((repo) => ({
+    name: repo.name,
+    description: repo.description || '',
+    languages: repo.languages || [],
+    frameworks: repo.frameworks || [],
+  }));
+
+  const reposFromActivity = (githubData.recentActivity || []).map((repoText) => {
+    const [namePart, descriptionPart = ''] = repoText.split(':');
+    const languageMatch = namePart.match(/\(([^)]+)\)/);
+    return {
+      name: namePart.replace(/\s*\([^)]+\)/, '').trim(),
+      description: descriptionPart.trim(),
+      languages: languageMatch ? [languageMatch[1]] : [],
+      frameworks: [],
+    };
+  });
+
+  const reposByName = new Map<string, GitHubRepoEvidence>();
+  [...reposFromDetails, ...reposFromActivity].forEach((repo) => {
+    if (repo.name) reposByName.set(repo.name.toLowerCase(), repo);
+  });
+
+  return [...reposByName.values()];
+}
+
+function buildDeterministicProjectVerification(
+  resumeProjects: ResumeProject[],
+  githubRepos: GitHubRepoEvidence[]
+): ProjectVerification {
+  const matches: ProjectVerification['matches'] = [];
+  const gaps: string[] = [];
+  const usedRepos = new Set<string>();
+
+  for (const project of resumeProjects) {
+    const projectKey = normalizeMatchText(project.name);
+    const repo = githubRepos.find((candidateRepo) => {
+      const repoKey = normalizeMatchText(candidateRepo.name);
+      return repoKey === projectKey || repoKey.includes(projectKey) || projectKey.includes(repoKey);
+    });
+
+    if (repo) {
+      usedRepos.add(repo.name);
+      const sharedTech = project.technologies.filter((tech) => {
+        const techKey = normalizeMatchText(tech);
+        return [...repo.languages, ...repo.frameworks, repo.description].some((value) =>
+          normalizeMatchText(value).includes(techKey)
+        );
+      });
+
+      matches.push({
+        resumeProject: project.name,
+        githubRepo: repo.name,
+        evidence: sharedTech.length > 0
+          ? `Repository name matches the resume project and shares ${sharedTech.join(', ')} evidence.`
+          : 'Repository name closely matches the resume project. Dependency evidence was not fetched or not visible from the available GitHub data.',
+        confidence: sharedTech.length > 0 ? 'high' : 'medium',
+      });
+    } else {
+      gaps.push(`${project.name} has no clear matching public GitHub repository.`);
+    }
+  }
+
+  const confidence = matches.length === resumeProjects.length
+    ? 'high'
+    : matches.length > 0
+      ? 'medium'
+      : 'low';
+
+  return {
+    summary: matches.length > 0
+      ? `${matches.length}/${resumeProjects.length} resume project(s) have a clear GitHub repository name match.`
+      : 'No resume projects have a clear GitHub repository name match.',
+    confidence,
+    matches,
+    gaps,
+    conflicts: [],
+  };
+}
+
+async function analyzeProjectVerification(
+  glmAnalysis: unknown,
+  githubData: GitHubData | null,
+  cvText: string
+): Promise<ProjectVerification> {
+  const resumeProjects = extractResumeProjects(glmAnalysis);
+  const fallbackProjects = resumeProjects.length > 0 ? resumeProjects : extractResumeProjectsFromCvText(cvText);
+  const githubRepos = normalizeGitHubRepoEvidence(githubData);
+
+  if (fallbackProjects.length === 0) {
+    return {
+      summary: 'No resume projects were available for GitHub matching.',
+      confidence: 'low',
+      matches: [],
+      gaps: [],
+      conflicts: [],
+    };
+  }
+
+  if (githubRepos.length === 0) {
+    return {
+      summary: 'No GitHub repositories were available for project matching.',
+      confidence: 'low',
+      matches: [],
+      gaps: fallbackProjects.map((project) => `${project.name} was listed in the resume but no GitHub repository evidence was available.`),
+      conflicts: [],
+    };
+  }
+
+  const deterministicResult = buildDeterministicProjectVerification(fallbackProjects, githubRepos);
+
+  const prompt = `Compare resume projects against GitHub repository evidence.
+
+Return JSON only:
+{
+  "summary": "2 sentence hiring-focused analysis",
+  "confidence": "high|medium|low",
+  "matches": [
+    {
+      "resumeProject": "project name from resume",
+      "githubRepo": "matching GitHub repo name",
+      "evidence": "why they match, based on name, description, languages, or frameworks",
+      "confidence": "high|medium|low"
+    }
+  ],
+  "gaps": ["resume project that has weak or no GitHub evidence"],
+  "conflicts": ["specific mismatch or suspicious difference"]
+}
+
+Rules:
+- Match by project name, purpose, technologies, and repository description.
+- Do not invent repositories or claims.
+- A weak name-only match should be medium or low confidence.
+- Missing framework evidence in GitHub metadata is a gap, not a conflict.
+- Only report a conflict when GitHub evidence directly contradicts the resume.
+- Do not say the resume overstates the tech stack just because package/framework evidence is unavailable.
+- If no project matches, say that clearly in summary.
+
+Resume projects:
+${JSON.stringify(fallbackProjects).slice(0, 6000)}
+
+GitHub repositories:
+${JSON.stringify(githubRepos).slice(0, 6000)}`;
+
+  try {
+    const response = await callLLM([{ role: 'user', content: prompt }], 0);
+    const parsed = response ? extractJsonFromResponse(response) : null;
+    const llmMatches = Array.isArray(parsed?.matches)
+      ? parsed.matches
+          .map((match: unknown) => {
+            const item = match as {
+              resumeProject?: unknown;
+              githubRepo?: unknown;
+              evidence?: unknown;
+              confidence?: unknown;
+            };
+            return {
+              resumeProject: typeof item.resumeProject === 'string' ? item.resumeProject : '',
+              githubRepo: typeof item.githubRepo === 'string' ? item.githubRepo : '',
+              evidence: typeof item.evidence === 'string' ? item.evidence : '',
+              confidence: ['high', 'medium', 'low'].includes(item.confidence as string)
+                ? item.confidence as 'high' | 'medium' | 'low'
+                : 'low',
+            };
+          })
+          .filter((match: ProjectVerification['matches'][number]) => match.resumeProject && match.githubRepo)
+      : [];
+
+    const matchesByProject = new Map<string, ProjectVerification['matches'][number]>();
+    [...deterministicResult.matches, ...llmMatches].forEach((match) => {
+      matchesByProject.set(normalizeMatchText(match.resumeProject), match);
+    });
+    const matches = [...matchesByProject.values()];
+    const matchedProjectKeys = new Set(matches.map((match) => normalizeMatchText(match.resumeProject)));
+    const llmGaps = Array.isArray(parsed?.gaps)
+      ? parsed.gaps.filter((gap: unknown): gap is string => typeof gap === 'string')
+      : [];
+    const gaps = [...deterministicResult.gaps, ...llmGaps].filter((gap, index, allGaps) => {
+      const gapKey = normalizeMatchText(gap);
+      return ![...matchedProjectKeys].some((projectKey) => gapKey.includes(projectKey)) && allGaps.indexOf(gap) === index;
+    });
+
+    return {
+      summary: typeof parsed?.summary === 'string' ? parsed.summary : deterministicResult.summary,
+      confidence: matches.length > 0 ? deterministicResult.confidence : 'low',
+      matches,
+      gaps,
+      conflicts: Array.isArray(parsed?.conflicts)
+        ? parsed.conflicts.filter((conflict: unknown): conflict is string => typeof conflict === 'string')
+        : [],
+    };
+  } catch (error) {
+    console.error('Project verification failed:', error);
+    return deterministicResult;
+  }
 }
 
 function detectRedFlags(
@@ -489,10 +984,10 @@ function detectRedFlags(
 }
 
 function calculateOverallScore(result: InvestigationResult): number {
-  let score = 40;
+  let score = 30;
 
-  if (result.githubData?.exists) score += 20;
-  if (result.linkedinData?.exists) score += 15;
+  if (result.githubData?.exists) score += 15;
+  if (result.linkedinData?.exists) score += 5;
 
   if (result.githubData?.exists && result.githubData.publicRepos > 5) score += 5;
   if (result.githubData?.exists && result.githubData.followers > 20) score += 5;
@@ -501,8 +996,31 @@ function calculateOverallScore(result: InvestigationResult): number {
   const skillRatio = result.claimsVerified.verifiedSkills.length / Math.max(1, result.claimsVerified.claimedSkills.length);
   score += Math.round(skillRatio * 15);
 
+  if (result.projectVerification) {
+    const projectSignalCount =
+      result.projectVerification.matches.length +
+      result.projectVerification.gaps.length +
+      result.projectVerification.conflicts.length;
+    const projectMatchRatio = result.projectVerification.matches.length / Math.max(1, projectSignalCount);
+    score += Math.round(projectMatchRatio * 25);
+
+    if (result.projectVerification.matches.length === 0 && result.projectVerification.gaps.length > 0) {
+      score -= 20;
+    }
+
+    score -= Math.min(20, result.projectVerification.conflicts.length * 8);
+  }
+
   if (result.redFlags.length === 0) score += 10;
-  else if (result.redFlags.length <= 2) score += 5;
+  else score -= Math.min(20, result.redFlags.length * 5);
+
+  if (
+    result.projectVerification &&
+    result.projectVerification.matches.length === 0 &&
+    result.projectVerification.gaps.length > 0
+  ) {
+    score = Math.min(score, 65);
+  }
 
   return Math.min(100, Math.max(0, score));
 }
@@ -836,8 +1354,9 @@ export async function investigateCandidate(
   ]);
 
   if (githubData?.exists && githubUsername) {
-    const [repos, crawlData] = await Promise.all([
+    const [repos, repoEvidence, crawlData] = await Promise.all([
       fetchGitHubRepos(githubUsername),
+      fetchGitHubRepoEvidence(githubUsername),
       analyzeGitHubWithCrawl(githubUsername),
     ]);
 
@@ -847,13 +1366,21 @@ export async function investigateCandidate(
       pinnedRepos: crawlData.pinnedRepos || [],
       contributions: crawlData.contributions || githubData.contributions,
       bio: crawlData.bio || githubData.bio,
+      repoDetails: repoEvidence.length > 0 ? repoEvidence : crawlData.repoDetails || [],
     });
   }
 
-  const claimedSkills = (candidate.glmAnalysis as { skills?: string[] })?.skills || [];
+  const claimedSkills = extractClaimedSkills(candidate.glmAnalysis, cvText);
   const claimsVerified = analyzeSkills(cvText, claimedSkills);
 
+  const projectVerification = await analyzeProjectVerification(candidate.glmAnalysis, githubData, cvText);
   const redFlags = detectRedFlags(githubData, linkedinData, cvText, claimsVerified);
+  if (githubData?.exists && projectVerification.matches.length === 0 && projectVerification.gaps.length > 0) {
+    redFlags.push('Resume projects have no clear GitHub repository match');
+  }
+  if (projectVerification.conflicts.length > 0) {
+    redFlags.push(`Project verification found ${projectVerification.conflicts.length} conflict(s)`);
+  }
 
   const investigationData: InvestigationResult = {
     githubVerified: githubData?.exists || false,
@@ -861,6 +1388,7 @@ export async function investigateCandidate(
     githubData,
     linkedinData,
     claimsVerified,
+    projectVerification,
     redFlags,
     overallScore: 0,
     recommendation: 'REVIEW',

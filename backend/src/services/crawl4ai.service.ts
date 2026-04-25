@@ -1,13 +1,12 @@
-import { exec, spawn } from 'child_process';
-import { promisify } from 'util';
+import { spawn } from 'child_process';
+import path from 'path';
 
-const execAsync = promisify(exec);
-
-const CRAWL_SCRIPT = '/home/unix/UMHack26-Hireflow/backend/scripts/crawl_url.py';
+const CRAWL_SCRIPT = path.resolve(__dirname, '../../scripts/crawl_url.py');
+const PYTHON_COMMAND = process.platform === 'win32' ? 'python' : 'python3';
 
 export async function crawlUrl(url: string, timeout = 30): Promise<string | null> {
   return new Promise((resolve) => {
-    const proc = spawn('python3', [CRAWL_SCRIPT, url], {
+    const proc = spawn(PYTHON_COMMAND, [CRAWL_SCRIPT, url], {
       timeout: timeout * 1000,
       stdio: ['ignore', 'pipe', 'pipe'],
     });

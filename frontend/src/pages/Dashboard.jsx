@@ -6,6 +6,7 @@ import {
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
 import InDepthCVAnalysisModal from '../components/InDepthCVAnalysisModal';
+import { formatDate } from '../utils/dateFormat';
 
 const sectionCountClassName = 'inline-flex min-h-7 items-center rounded-full bg-zinc-100 px-2.5 text-xs font-black tracking-[0.08em] text-zinc-600';
 
@@ -139,14 +140,7 @@ const interviewStatusSet = new Set([
 ]);
 
 const formatCompactDate = (value) => {
-  if (!value) return 'No date';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'No date';
-
-  return date.toLocaleDateString(undefined, {
-    month: 'short',
-    day: 'numeric',
-  });
+  return formatDate(value);
 };
 
 const formatRelativeDay = (value) => {

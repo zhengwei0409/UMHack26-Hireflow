@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import {
@@ -24,46 +24,69 @@ const InterviewResponse = ({ type }) => {
   const [success, setSuccess] = useState(false);
   const [showReason, setShowReason] = useState(false);
   const [reason, setReason] = useState('');
+  const [email, setEmail] = useState(searchParams.get('email') || '');
+  const [needsEmail, setNeedsEmail] = useState(!searchParams.get('email'));
+  const autoStartedRef = useRef(false);
+  const submittedRef = useRef(false);
 
-  useEffect(() => {
-    submitResponse();
-  }, []);
+  const submitWithEmail = useCallback(async (identityEmail, rescheduleReason) => {
+    if (type === 'confirm') {
+      await api.candidates.confirmInterview(candidateId, identityEmail);
+    } else {
+      await api.candidates.requestReschedule(candidateId, identityEmail, rescheduleReason);
+    }
+  }, [candidateId, type]);
 
-  const submitResponse = async (rescheduleReason = null) => {
+  const submitResponse = useCallback(async (rescheduleReason = null) => {
+    const identityEmail = email.trim();
+    if (!identityEmail) {
+      setNeedsEmail(true);
+      setLoading(false);
+      return;
+    }
+
+    if (submittedRef.current) return;
+    submittedRef.current = true;
     setLoading(true);
     setError('');
 
     try {
-      const email = searchParams.get('email');
-      if (!email) {
-        const emailInput = prompt('Please enter your email address to confirm your identity:');
-        if (!emailInput) {
-          navigate('/');
-          return;
-        }
-        await submitWithEmail(emailInput, rescheduleReason);
-      } else {
-        await submitWithEmail(email, rescheduleReason);
-      }
+      await submitWithEmail(identityEmail, rescheduleReason);
       setSuccess(true);
     } catch (err) {
       setError(err.message || 'Something went wrong');
+      submittedRef.current = false;
     } finally {
       setLoading(false);
     }
-  };
+  }, [email, submitWithEmail]);
 
-  const submitWithEmail = async (email, rescheduleReason) => {
-    if (type === 'confirm') {
-      await api.candidates.confirmInterview(candidateId, email);
-    } else {
-      await api.candidates.requestReschedule(candidateId, email, rescheduleReason);
+  useEffect(() => {
+    if (autoStartedRef.current) return;
+    autoStartedRef.current = true;
+
+    if (type === 'confirm' && email) {
+      submitResponse();
+      return;
     }
-  };
+
+    setLoading(false);
+  }, [email, submitResponse, type]);
 
   const handleReschedule = (e) => {
     e.preventDefault();
     submitResponse(reason);
+  };
+
+  const handleEmailSubmit = (e) => {
+    e.preventDefault();
+    if (type === 'confirm') {
+      submitResponse();
+      return;
+    }
+
+    setNeedsEmail(false);
+    setShowReason(true);
   };
 
   if (loading) {
@@ -78,7 +101,7 @@ const InterviewResponse = ({ type }) => {
     );
   }
 
-  if (error) {
+  if (error && !needsEmail && !(type === 'reschedule' && showReason)) {
     return (
       <Shell>
         <div className="grid h-14 w-14 place-items-center rounded-full bg-red-100 text-xl font-extrabold text-red-700">
@@ -116,6 +139,59 @@ const InterviewResponse = ({ type }) => {
             ? 'A confirmation email has been sent to your email address.'
             : 'HR will review your request and contact you with a new time if needed.'}
         </p>
+      </Shell>
+    );
+  }
+
+  if (needsEmail) {
+    return (
+      <Shell>
+        <p className="text-xs font-extrabold uppercase tracking-[0.24em] text-zinc-500">
+          {type === 'confirm' ? 'Confirm identity' : 'Interview timing'}
+        </p>
+        <h1 className="app-page-title mt-3 text-3xl text-zinc-950">
+          {type === 'confirm' ? 'Confirm your interview' : 'Request a reschedule'}
+        </h1>
+        <p className="mt-4 text-sm font-medium leading-7 text-zinc-600">
+          Please enter the same email address used in your application so we can verify this response.
+        </p>
+
+        <form className="mt-6 grid gap-5" onSubmit={handleEmailSubmit}>
+          <label className="grid gap-2 text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">
+            <span>Email address</span>
+            <input
+              className={fieldClassName}
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="you@example.com"
+              required
+            />
+          </label>
+
+          {error && (
+            <div className="rounded-md border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+              {error}
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-3">
+            <button
+              type="button"
+              className={buttonSecondaryClassName}
+              onClick={() => navigate('/')}
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className={`primary-cta ${buttonPrimaryClassName}`}
+              disabled={loading}
+            >
+              {type === 'confirm' ? 'Confirm interview' : 'Continue'}
+            </button>
+          </div>
+        </form>
       </Shell>
     );
   }

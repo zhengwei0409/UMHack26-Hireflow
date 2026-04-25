@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import api from '../services/api';
+import { formatDate, formatTime } from '../utils/dateFormat';
 
 const STATUS_CONFIG = {
   CV_RECEIVED: { label: 'Application Received', color: 'border-zinc-200 bg-zinc-50 text-zinc-700', step: 1 },
@@ -13,16 +14,6 @@ const STATUS_CONFIG = {
   OFFER_SENT: { label: 'Offer Sent', color: 'border-emerald-200 bg-emerald-50 text-emerald-700', step: 8 },
   HIRED: { label: 'Hired', color: 'border-emerald-200 bg-emerald-50 text-emerald-700', step: 9 },
   REJECTED: { label: 'Not Selected', color: 'border-red-200 bg-red-50 text-red-700', step: -1 },
-};
-
-const formatDate = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-};
-
-const formatTime = (date) => {
-  if (!date) return '';
-  return new Date(date).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 };
 
 const CandidatePortal = () => {
