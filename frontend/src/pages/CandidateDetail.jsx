@@ -95,6 +95,29 @@ const getAnswerEvidence = (answer) => {
   return parts.length > 0 ? parts : null;
 };
 
+const getAiInterviewResult = (candidate) => {
+  const status = String(candidate?.status || '').toUpperCase();
+  const hasScore = candidate?.aiInterviewScore !== null && candidate?.aiInterviewScore !== undefined;
+
+  if (hasScore) {
+    return candidate.isShortlisted ? 'Shortlisted' : 'Not shortlisted';
+  }
+
+  if (status === 'AI_INTERVIEW_COMPLETED') {
+    return 'Pending scoring';
+  }
+
+  if (status === 'AI_INTERVIEW_IN_PROGRESS') {
+    return 'In progress';
+  }
+
+  if (status === 'AI_INTERVIEW_INVITED') {
+    return 'Invited, not completed';
+  }
+
+  return 'AI interview not started';
+};
+
 const PIPELINE_STAGES = [
   {
     key: 'application',
@@ -633,8 +656,8 @@ const CandidateDetail = () => {
               <div className="grid gap-3 sm:grid-cols-2">
                 <MetricTile label="Job" value={candidate.job?.title || '-'} />
                 <MetricTile label="Department" value={candidate.job?.department || '-'} />
-                <MetricTile label="Auto-screen" value={candidate.autoScreenDecision || '-'} />
-                <MetricTile label="Shortlisted" value={candidate.isShortlisted ? 'Yes' : 'No'} />
+                <MetricTile label="CV screening" value={candidate.autoScreenDecision || '-'} />
+                <MetricTile label="AI interview result" value={getAiInterviewResult(candidate)} />
               </div>
             </DetailCard>
 

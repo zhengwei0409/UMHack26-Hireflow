@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 
 const CRAWL4AI_API_URL = process.env.CRAWL4AI_API_URL || 'http://localhost:11235';
+const ENABLE_LINKEDIN_CRAWL = process.env.ENABLE_LINKEDIN_CRAWL === 'true';
 
 export interface InvestigationResult {
   githubVerified: boolean;
@@ -223,13 +224,26 @@ async function fetchGitHubRepos(username: string): Promise<string[]> {
 async function fetchLinkedinProfile(username: string): Promise<LinkedinData> {
   const profileUrl = `https://www.linkedin.com/in/${username}`;
 
+  if (!ENABLE_LINKEDIN_CRAWL) {
+    return {
+      profileUrl,
+      exists: true,
+      headline: null,
+      company: null,
+      education: null,
+      connections: null,
+      skills: [],
+      about: null,
+    };
+  }
+
   try {
     const content = await crawlUrlFn(profileUrl);
 
     if (!content) {
       return {
         profileUrl,
-        exists: false,
+        exists: true,
         headline: null,
         company: null,
         education: null,
@@ -268,7 +282,7 @@ ${content.slice(0, 5000)}`;
   } catch {
     return {
       profileUrl,
-      exists: false,
+      exists: true,
       headline: null,
       company: null,
       education: null,
@@ -528,6 +542,16 @@ ${cvText.slice(0, 5000)}`;
 
 async function scrapeLinkData(url: string, platform: string): Promise<unknown> {
   try {
+    if (platform === 'linkedin' && !ENABLE_LINKEDIN_CRAWL) {
+      return {
+        headline: '',
+        about: '',
+        experience: [],
+        education: [],
+        skills: [],
+      };
+    }
+
     const content = await crawlUrlFn(url);
 
     if (!content) return null;
@@ -790,10 +814,25 @@ export async function investigateCandidate(
     linkedinUsername = extractLinkedinUsername(socialLinks.linkedinUrl);
   }
 
-  const [githubData, linkedinData, cvText] = await Promise.all([
+  const cvText = await loadCvText(candidate.cvFilePath);
+
+  if (!githubUsername || !linkedinUsername) {
+    const cvLinks = extractLinksFromCvText(cvText);
+
+    if (!githubUsername) {
+      const githubLink = cvLinks.find(link => link.platform === 'github');
+      githubUsername = githubLink ? extractGitHubUsername(githubLink.url) : null;
+    }
+
+    if (!linkedinUsername) {
+      const linkedinLink = cvLinks.find(link => link.platform === 'linkedin');
+      linkedinUsername = linkedinLink ? extractLinkedinUsername(linkedinLink.url) : null;
+    }
+  }
+
+  const [githubData, linkedinData] = await Promise.all([
     githubUsername ? fetchGitHubProfile(githubUsername) : Promise.resolve(null),
     linkedinUsername ? fetchLinkedinProfile(linkedinUsername) : Promise.resolve(null),
-    loadCvText(candidate.cvFilePath),
   ]);
 
   if (githubData?.exists && githubUsername) {

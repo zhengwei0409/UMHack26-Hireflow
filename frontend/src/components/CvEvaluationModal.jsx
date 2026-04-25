@@ -90,6 +90,16 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
                   </div>
                 ) : (
                   <>
+                    <div className="flex justify-end">
+                      <button
+                        onClick={runInvestigation}
+                        disabled={loading}
+                        className="inline-flex items-center justify-center rounded-md border border-zinc-300 bg-white px-3.5 py-2 text-sm font-extrabold text-zinc-900 hover:bg-zinc-50 disabled:opacity-50"
+                      >
+                        Run Again
+                      </button>
+                    </div>
+
                     <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
                       <div className="flex items-center justify-between mb-3">
                         <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500">Verification Score</h3>
@@ -125,12 +135,23 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
                       </div>
 
                       <div className="rounded-2xl border border-zinc-200 bg-zinc-50 p-5">
-                        <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc.500 mb-3">LinkedIn Profile</h3>
+                        <h3 className="text-sm font-extrabold uppercase tracking-[0.18em] text-zinc-500 mb-3">LinkedIn Profile</h3>
                         {investigation.linkedinData?.exists ? (
                           <div className="space-y-2 text-sm">
                             <p className="font-medium text-emerald-700 flex items-center gap-2">
-                              <span className="text-emerald-500">✓</span> Verified
+                              <span className="text-emerald-500">✓</span>
+                              {investigation.linkedinData.headline || investigation.linkedinData.company ? 'Verified' : 'Profile URL found'}
                             </p>
+                            {investigation.linkedinData.profileUrl && (
+                              <a
+                                href={investigation.linkedinData.profileUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="block truncate text-zinc-600 underline underline-offset-2"
+                              >
+                                {investigation.linkedinData.profileUrl}
+                              </a>
+                            )}
                             <p className="text-zinc-600">Company: {investigation.linkedinData.company || 'N/A'}</p>
                             <p className="text-zinc-600">Connections: {investigation.linkedinData.connections || 'N/A'}</p>
                           </div>
