@@ -1,22 +1,85 @@
 {
   "$schema": "https://railway.app/railway.schema.json",
-  "bot": {
-    "build": {
-      "dockerfilePath": "docker/Dockerfile.simple",
-      "builder": "DOCKER"
+  "services": [
+    {
+      "name": "hireflow-backend",
+      "path": "backend",
+      "build": {
+        "builder": "NIXPACKS"
+      },
+      "deploy": {
+        "startCommand": "node dist/index.js",
+        "healthCheckPath": "/api/v1/dashboard",
+        "restartPolicyType": "ON_FAILURE",
+        "restartPolicyMaxRetries": 3
+      },
+      "env": {
+        "NODE_ENV": "production",
+        "PORT": "8080",
+        "JWT_SECRET": "${{ JWT_SECRET }}",
+        "DATABASE_URL": "${{ DATABASE_URL }}",
+        "SMTP_HOST": "${{ SMTP_HOST }}",
+        "SMTP_PORT": "${{ SMTP_PORT }}",
+        "SMTP_USER": "${{ SMTP_USER }}",
+        "SMTP_PASS": "${{ SMTP_PASS }}",
+        "FROM_EMAIL": "${{ FROM_EMAIL }}",
+        "GLM_API_KEY": "${{ GLM_API_KEY }}",
+        "GLM_API_BASE": "${{ GLM_API_BASE }}"
+      }
     },
-    "deploy": {
-      "numReplicas": 1,
-      "healthCheckPath": "/health"
-    }
-  },
-  "dashboard": {
-    "build": {
-      "dockerfilePath": "dashboard/Dockerfile",
-      "builder": "DOCKER"
+    {
+      "name": "hireflow-frontend",
+      "path": "frontend",
+      "build": {
+        "builder": "NIXPACKS"
+      },
+      "deploy": {
+        "startCommand": "npm run preview -- --host 0.0.0.0 --port $PORT",
+        "healthCheckPath": "/",
+        "restartPolicyType": "ON_FAILURE"
+      },
+      "env": {
+        "VITE_API_BASE": "${{ RAILWAY_PRIVATE_DOMAIN }}/hireflow-backend/api/v1",
+        "PORT": "4173"
+      }
     },
-    "deploy": {
-      "numReplicas": 1
+    {
+      "name": "ai-interviewer",
+      "path": ".",
+      "build": {
+        "dockerfilePath": "dashboard/Dockerfile",
+        "builder": "DOCKER"
+      },
+      "deploy": {
+        "startCommand": "cd dashboard && /app/.venv/bin/uvicorn main:app --host 0.0.0.0 --port $PORT",
+        "healthCheckPath": "/api/health",
+        "restartPolicyType": "ON_FAILURE"
+      },
+      "env": {
+        "PORT": "8001",
+        "ILMU_API_KEY": "${{ ILMU_API_KEY }}",
+        "ILMU_BASE_URL": "https://api.deepseek.com/v1",
+        "CLOUD_MODE": "true",
+        "DOCKER_PATH": ""
+      }
+    },
+    {
+      "name": "postgres",
+      "image": "postgres:15",
+      "deploy": {
+        "restartPolicyType": "ON_FAILURE"
+      },
+      "env": {
+        "POSTGRES_USER": "postgres",
+        "POSTGRES_PASSWORD": "${{ POSTGRES_PASSWORD }}",
+        "POSTGRES_DB": "hireflow"
+      },
+      "volumes": [
+        {
+          "mountPath": "/var/lib/postgresql/data",
+          "name": "pgdata"
+        }
+      ]
     }
-  }
+  ]
 }

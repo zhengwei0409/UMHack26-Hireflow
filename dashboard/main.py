@@ -394,38 +394,70 @@ async def create_bot(data: MeetingBotCreate) -> MeetingBot:
         mode=data.mode,
     )
 
-    # Immediately start a Docker container for this bot
+    # Immediately start bot (Docker locally, cloud API otherwise)
     if data.meeting_url:
-        try:
-            docker_path = "/Applications/Docker.app/Contents/Resources/bin/docker"
-            if not os.path.exists(docker_path):
-                docker_path = "docker"
-            if not os.path.exists(docker_path):
-                raise Exception(f"Docker not found")
-            
-            container_name = f"joinly-{bot.id[:8]}"
-            prompt = data.scenario or "You are a helpful AI assistant joining this meeting."
-
-            cmd = [
-                docker_path, "run", "-d",
-                "--name", container_name,
-                "--add-host=host.docker.internal:host-gateway",
-                "-e", f"ILMU_API_KEY={os.environ.get('ILMU_API_KEY', os.environ.get('DEEPSEEK_API_KEY', 'YOUR_API_KEY_HERE'))}",
-                "-e", "ILMU_BASE_URL=https://api.deepseek.com/v1",
-                "-e", "JOINLY_PROMPT={prompt}",
-                "-e", "JOINLY_SERVER_URL=http://host.docker.internal:8000",
-                "joinly:latest",
-                "--client", data.meeting_url,
-                "--name", data.participant_name or "AI Bot",
-                "--llm-provider", "ilmu",
-                "--llm-model", "deepseek-chat",
-            ]
-
-            subprocess.run(cmd, capture_output=True, text=True, timeout=60)
-            bot.status = BotStatus.ACTIVE
-        except Exception as e:
-            bot.error_message = str(e)
-            bot.status = BotStatus.ERROR
+        cloud_mode = is_cloud_mode()
+        
+        if cloud_mode:
+            # Cloud mode: Use external joinly API
+            try:
+                import httpx
+                cloud_url = os.environ.get("JOINLY_SERVER_URL", "")
+                if not cloud_url:
+                    raise Exception("JOINLY_SERVER_URL not set in cloud mode")
+                
+                async with httpx.AsyncClient() as client:
+                    response = await client.post(
+                        f"{cloud_url}/api/bots",
+                        json={
+                            "name": data.participant_name or "AI Bot",
+                            "meeting_url": data.meeting_url,
+                            "scenario": data.scenario or "You are a helpful AI assistant",
+                            "llm_provider": "ilmu",
+                            "llm_model": "deepseek-chat",
+                        },
+                        timeout=30.0,
+                    )
+                    if response.status_code != 200:
+                        raise Exception(f"Cloud API error: {response.text}")
+                    result = response.json()
+                    bot.status = BotStatus.ACTIVE
+                    bot.started_at = datetime.now(timezone.utc)
+            except Exception as e:
+                bot.error_message = str(e)
+                bot.status = BotStatus.ERROR
+        else:
+            # Local mode: spawn Docker container
+            try:
+                docker_path = "/Applications/Docker.app/Contents/Resources/bin/docker"
+                if not os.path.exists(docker_path):
+                    docker_path = "docker"
+                if not os.path.exists(docker_path):
+                    raise Exception(f"Docker not found")
+                
+                container_name = f"joinly-{bot.id[:8]}"
+                prompt = data.scenario or "You are a helpful AI assistant joining this meeting."
+                
+                cmd = [
+                    docker_path, "run", "-d",
+                    "--name", container_name,
+                    "--add-host=host.docker.internal:host-gateway",
+                    "-e", f"ILMU_API_KEY={os.environ.get('ILMU_API_KEY', os.environ.get('DEEPSEEK_API_KEY', 'YOUR_API_KEY_HERE'))}",
+                    "-e", "ILMU_BASE_URL=https://api.deepseek.com/v1",
+                    "-e", f"JOINLY_PROMPT={prompt}",
+                    "-e", "JOINLY_SERVER_URL=http://host.docker.internal:8000",
+                    "joinly:latest",
+                    "--client", data.meeting_url,
+                    "--name", data.participant_name or "AI Bot",
+                    "--llm-provider", "ilmu",
+                    "--llm-model", "deepseek-chat",
+                ]
+                
+                subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+                bot.status = BotStatus.ACTIVE
+            except Exception as e:
+                bot.error_message = str(e)
+                bot.status = BotStatus.ERROR
 
     manager.sessions[bot.id] = SessionState(bot=bot)
     return bot
