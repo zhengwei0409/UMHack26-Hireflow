@@ -295,6 +295,101 @@ const MetricTile = ({ label, value }) => (
   </div>
 );
 
+const getVerificationOverview = (result) => {
+  if (!result?.overallScore && result?.overallScore !== 0) {
+    return {
+      status: 'Not run',
+      verificationScore: '-',
+      githubUrl: null,
+      linkedinUrl: null,
+      cta: 'Start profile check',
+      tone: 'border-zinc-200 bg-zinc-50 text-zinc-700',
+    };
+  }
+
+  const recommendation = result.recommendation || 'REVIEW';
+  const githubUrl = result.githubData?.exists && result.githubData?.username
+    ? `https://github.com/${result.githubData.username}`
+    : null;
+  const linkedinUrl = result.linkedinData?.exists && result.linkedinData?.profileUrl
+    ? result.linkedinData.profileUrl
+    : null;
+
+  return {
+    status: recommendation,
+    verificationScore: `${result.overallScore}/100`,
+    githubUrl,
+    linkedinUrl,
+    cta: 'Review verification',
+    tone:
+      recommendation === 'ACCEPT'
+        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
+        : recommendation === 'REJECT'
+          ? 'border-red-200 bg-red-50 text-red-700'
+          : 'border-amber-200 bg-amber-50 text-amber-800',
+  };
+};
+
+const VerificationLinkRow = ({ label, url }) => (
+  <div className="grid gap-1">
+    <span className="text-xs font-extrabold uppercase tracking-[0.14em] text-zinc-500">{label}</span>
+    {url ? (
+      <a
+        href={url}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="truncate text-sm font-black text-zinc-950 underline underline-offset-4 transition hover:text-blue-700"
+      >
+        {url.replace(/^https?:\/\//, '')}
+      </a>
+    ) : (
+      <span className="text-sm font-semibold text-zinc-400">Not found</span>
+    )}
+  </div>
+);
+
+const VerificationPreview = ({ candidate, onOpen }) => {
+  const result = candidate?.investigationResult;
+  const overview = getVerificationOverview(result);
+
+  return (
+    <section className="w-full rounded-md border border-zinc-200 bg-zinc-50 p-4 lg:w-[360px]">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Profile verification</p>
+          <h2 className="mt-1 text-xl font-black tracking-tight text-zinc-950">{overview.verificationScore}</h2>
+        </div>
+        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${overview.tone}`}>
+          {overview.status}
+        </span>
+      </div>
+
+      <div className="mt-4 grid gap-3">
+        <div className="flex items-center justify-between gap-3">
+          <span className="text-sm font-semibold text-zinc-500">Verification score</span>
+          <span className="text-sm font-black text-zinc-950">{overview.verificationScore}</span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-3 border-t border-zinc-200 pt-4">
+        <VerificationLinkRow label="GitHub URL" url={overview.githubUrl} />
+        <VerificationLinkRow label="LinkedIn URL" url={overview.linkedinUrl} />
+      </div>
+
+      <button
+        type="button"
+        onClick={onOpen}
+        className="mt-4 inline-flex min-h-10 w-full items-center justify-center rounded-md bg-black px-4 text-sm font-extrabold text-white transition hover:bg-zinc-800"
+      >
+        {overview.cta}
+      </button>
+      <p className="mt-3 text-xs font-medium leading-5 text-zinc-500">
+        Uses CV links, GitHub API, and LinkedIn URL detection. LinkedIn crawling stays off by default.
+      </p>
+    </section>
+  );
+};
+
 const PipelineProgress = ({ status }) => {
   const currentIndex = getPipelineIndex(status);
   const tone = getPipelineTone(status);
@@ -620,12 +715,10 @@ const CandidateDetail = () => {
             </div>
 
             <div className="flex items-start justify-start lg:justify-end">
-              <button
-                onClick={() => setShowAiAnalysisModal(true)}
-                className="inline-flex min-h-11 items-center justify-center rounded-md bg-black px-4 text-sm font-extrabold text-white transition hover:bg-zinc-800"
-              >
-                Show AI Analysis
-              </button>
+              <VerificationPreview
+                candidate={candidate}
+                onOpen={() => setShowAiAnalysisModal(true)}
+              />
             </div>
           </div>
 
@@ -1006,6 +1099,9 @@ const CandidateDetail = () => {
           candidateId={id}
           isOpen={showAiAnalysisModal}
           onClose={() => setShowAiAnalysisModal(false)}
+          onUpdated={(investigationResult) => {
+            setCandidate((current) => current ? { ...current, investigationResult } : current);
+          }}
         />
       </div>
     </div>

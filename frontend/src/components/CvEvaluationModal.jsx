@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import api from '../services/api';
 
-const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
+const CvEvaluationModal = ({ candidateId, isOpen, onClose, onUpdated }) => {
   const [loading, setLoading] = useState(false);
   const [investigation, setInvestigation] = useState(null);
   const [activeTab, setActiveTab] = useState('investigation');
@@ -29,6 +29,7 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
     try {
       const res = await api.investigation.run(candidateId);
       setInvestigation(res.data);
+      onUpdated?.(res.data);
     } catch (err) {
       console.error('Investigation failed:', err);
     } finally {
@@ -43,8 +44,9 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
       <div className="w-full max-w-3xl rounded-[28px] border border-zinc-200 bg-white p-6 shadow-xl sm:p-8 max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         <div className="mb-6 flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-extrabold tracking-tight text-zinc-950">AI Analysis</h2>
-            <p className="mt-1 text-sm font-medium text-zinc-600">Comprehensive evaluation of the candidate</p>
+            <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Public profile check</p>
+            <h2 className="mt-1 text-2xl font-extrabold tracking-tight text-zinc-950">Profile verification</h2>
+            <p className="mt-1 text-sm font-medium text-zinc-600">Verify CV links, GitHub signals, and LinkedIn URL evidence.</p>
           </div>
           <button onClick={onClose} className="text-zinc-400 hover:text-zinc-600">
             <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -85,7 +87,7 @@ const CvEvaluationModal = ({ candidateId, isOpen, onClose }) => {
                       onClick={runInvestigation}
                       className="inline-flex items-center justify-center rounded-md bg-black px-4 py-2 text-sm font-extrabold text-white hover:bg-zinc-800"
                     >
-                      Run Investigation
+                      Start Profile Check
                     </button>
                   </div>
                 ) : (
