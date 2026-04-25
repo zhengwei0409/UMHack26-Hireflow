@@ -269,7 +269,7 @@ const PipelineProgress = ({ status }) => {
       </div>
 
       <div className="overflow-x-auto pb-2">
-        <div className="grid min-w-[980px] grid-cols-7 items-start">
+        <div className="grid min-w-[1160px] grid-cols-7 items-stretch">
           {PIPELINE_STAGES.map((stage, index) => {
             const isComplete = index < currentIndex;
             const isCurrent = index === currentIndex;
@@ -292,7 +292,7 @@ const PipelineProgress = ({ status }) => {
                 )}
 
                 <div
-                  className={`pipeline-stage-card relative z-10 flex min-h-[142px] flex-col rounded-md border p-3 transition ${
+                  className={`pipeline-stage-card relative z-10 flex h-full min-h-[170px] min-w-[150px] flex-col rounded-md border p-3 transition ${
                     isCurrent
                       ? `${tone.currentCard} pipeline-stage-current shadow-sm`
                       : isComplete
@@ -314,14 +314,14 @@ const PipelineProgress = ({ status }) => {
                     {isComplete ? '✓' : index + 1}
                   </div>
 
-                  <div className="mt-4">
+                  <div className="mt-4 min-h-[58px]">
                     <p className="text-sm font-black leading-5 text-current">{stage.label}</p>
                     <p className="mt-1 text-xs font-semibold leading-5 text-current opacity-70">{stage.description}</p>
                   </div>
 
                   <div className="mt-auto pt-4">
                     <span
-                      className={`inline-flex rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.14em] ${
+                      className={`inline-flex whitespace-nowrap rounded-full px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${
                         isCurrent
                           ? 'bg-zinc-950 text-white'
                           : isComplete
