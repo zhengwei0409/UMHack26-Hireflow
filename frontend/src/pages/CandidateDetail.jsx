@@ -299,16 +299,16 @@ const MetricTile = ({ label, value }) => (
 const getVerificationOverview = (result) => {
   if (!result?.overallScore && result?.overallScore !== 0) {
     return {
-      status: 'Not run',
+      status: 'Not verified',
       verificationScore: '-',
       githubUrl: null,
       linkedinUrl: null,
       cta: 'Start profile check',
-      tone: 'border-zinc-200 bg-zinc-50 text-zinc-700',
+      cardTone: 'border-dashed border-zinc-300 bg-white',
+      statusTone: 'border-zinc-200 bg-zinc-100 text-zinc-600',
     };
   }
 
-  const recommendation = result.recommendation || 'REVIEW';
   const githubUrl = result.githubData?.exists && result.githubData?.username
     ? `https://github.com/${result.githubData.username}`
     : null;
@@ -317,17 +317,13 @@ const getVerificationOverview = (result) => {
     : null;
 
   return {
-    status: recommendation,
+    status: 'Verified',
     verificationScore: `${result.overallScore}/100`,
     githubUrl,
     linkedinUrl,
     cta: 'Review verification',
-    tone:
-      recommendation === 'ACCEPT'
-        ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-        : recommendation === 'REJECT'
-          ? 'border-red-200 bg-red-50 text-red-700'
-          : 'border-amber-200 bg-amber-50 text-amber-800',
+    cardTone: 'border-emerald-200 bg-emerald-50/40',
+    statusTone: 'border-emerald-200 bg-emerald-50 text-emerald-700',
   };
 };
 
@@ -354,12 +350,12 @@ const VerificationPreview = ({ candidate, onOpen }) => {
   const overview = getVerificationOverview(result);
 
   return (
-    <section className="w-full rounded-md border border-zinc-200 bg-zinc-50 p-4 lg:w-[360px]">
+    <section className={`w-full rounded-md border p-4 lg:w-[360px] ${overview.cardTone}`}>
       <div className="flex items-start justify-between gap-4">
         <div>
           <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-zinc-500">Profile verification</p>
         </div>
-        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${overview.tone}`}>
+        <span className={`rounded-full border px-2.5 py-1 text-[11px] font-black uppercase tracking-[0.12em] ${overview.statusTone}`}>
           {overview.status}
         </span>
       </div>
