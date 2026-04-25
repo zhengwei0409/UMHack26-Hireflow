@@ -6,7 +6,6 @@ import {
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
 import InDepthCVAnalysisModal from '../components/InDepthCVAnalysisModal';
-import { hasLiveCandidateStatus } from '../utils/liveStatus';
 
 const sectionCountClassName = 'inline-flex min-h-7 items-center rounded-full bg-zinc-100 px-2.5 text-xs font-black tracking-[0.08em] text-zinc-600';
 
@@ -313,14 +312,12 @@ const Dashboard = () => {
   }, []);
 
   useEffect(() => {
-    if (!hasLiveCandidateStatus(candidates)) return undefined;
-
     const intervalId = window.setInterval(() => {
       loadData({ silent: true });
-    }, 5000);
+    }, 8000);
 
     return () => window.clearInterval(intervalId);
-  }, [candidates]);
+  }, []);
 
   const loadData = async ({ silent = false } = {}) => {
     if (!silent) setLoading(true);

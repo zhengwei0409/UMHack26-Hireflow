@@ -5,7 +5,6 @@ import {
   buttonPrimaryClassName,
   buttonSecondaryClassName,
 } from '../styles/buttonStyles';
-import { hasLiveCandidateStatus } from '../utils/liveStatus';
 
 const inputClassName =
   'min-h-[44px] w-full rounded-md border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-black focus:ring-2 focus:ring-black/10';
@@ -107,14 +106,12 @@ const JobDetail = () => {
   }, [id]);
 
   useEffect(() => {
-    if (!hasLiveCandidateStatus(candidates)) return undefined;
-
     const intervalId = window.setInterval(() => {
       loadCandidateData();
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [candidates, id]);
+  }, [id]);
 
   const loadData = async () => {
     try {

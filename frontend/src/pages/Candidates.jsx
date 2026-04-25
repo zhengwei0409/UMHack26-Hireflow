@@ -3,7 +3,6 @@ import { Link, useSearchParams } from 'react-router-dom';
 import api from '../services/api';
 import { buttonBaseClassName } from '../styles/buttonStyles';
 import InDepthCVAnalysisModal from '../components/InDepthCVAnalysisModal';
-import { hasLiveCandidateStatus } from '../utils/liveStatus';
 
 const selectClassName =
   'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
@@ -299,14 +298,12 @@ const Candidates = () => {
   }, [filters]);
 
   useEffect(() => {
-    if (!hasLiveCandidateStatus(candidates)) return undefined;
-
     const intervalId = window.setInterval(() => {
       loadCandidates({ silent: true });
     }, 5000);
 
     return () => window.clearInterval(intervalId);
-  }, [candidates, filters]);
+  }, [filters]);
 
   const loadData = async () => {
     try {
