@@ -119,23 +119,6 @@ Error / Retry States:
 
 ---
 
-## Planned Features (Roadmap)
-
-### AI Candidate Outreach via WhatsApp / Telegram
-- AI agent will proactively contact candidates through WhatsApp or Telegram to collect additional information, clarify resume gaps, or remind them about pending interview steps
-- Removes friction of email-only communication; reaches candidates on channels they actually use
-
-### GitHub Profile Crawler
-- AI will automatically crawl a candidate's linked GitHub account to assess code quality, project diversity, commit consistency, and language breadth
-- Extracted signals feed into the CV scoring step as supplemental evidence alongside the uploaded CV
-
-### Bias Audit Module
-- All AI decisions (CV scoring, behavioral scoring, ranking) will be logged with full prompt + response evidence
-- A dedicated audit view will flag statistically anomalous score distributions across demographic proxies (name-derived ethnicity, gender signals in CV text)
-- HR admins can run a bias report per job to verify the pipeline did not systematically favour or penalise any group
-
----
-
 ## Project Structure
 
 ```
