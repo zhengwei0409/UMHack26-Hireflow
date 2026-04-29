@@ -1,6 +1,10 @@
 # HireFlow — AI-Powered HR Hiring Pipeline
 
-> Built for UMHack 2026 · Domain: AI Systems & Agentic Workflow Automation
+> Built for UMHack 2026 · **Domain 1: AI Systems & Agentic Workflow Automation**
+> 
+> **Group:** We googled everything (Group ID: 11)
+>
+> 📽️ **https://drive.google.com/file/d/1UylHFAtk5zoP-V5wBIJa0aJympGK2e0U/view?usp=drive_link** — *Watch our full demo and presentation.*
 
 HireFlow automates the end-to-end hiring process using an LLM (GLM) as the central reasoning engine. HR teams only make Accept / Reject decisions at key checkpoints — everything else is handled automatically, including an AI-conducted technical interview round.
 
