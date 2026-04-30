@@ -458,9 +458,6 @@ const Dashboard = () => {
             <div className="max-w-2xl">
               <p className="text-xs font-black uppercase tracking-[0.22em] text-zinc-500">Dashboard</p>
               <h1 className="app-page-title mt-2 text-3xl text-zinc-950 sm:text-4xl">Today's work</h1>
-              <p className="mt-3 max-w-xl text-sm font-semibold leading-6 text-zinc-600">
-                Start with candidate decisions, then clear role risks.
-              </p>
             </div>
           </div>
 

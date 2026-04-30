@@ -1,7 +1,6 @@
 import React from 'react';
 import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom';
 import { useAuth } from '../App';
-import { buttonSecondaryClassName } from '../styles/buttonStyles';
 
 const navItems = [
   {
@@ -98,26 +97,27 @@ const SharedLayout = () => {
             ))}
           </nav>
 
-          <div className="mt-auto border-t border-zinc-200 px-4 py-5">
-            <div className="flex items-center gap-3 rounded-md border border-zinc-200 bg-zinc-50 p-3">
-              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-zinc-900 text-xs font-bold text-white">
+          <div className="mt-auto border-t border-zinc-200 px-4 py-4">
+            <div className="flex items-center gap-3 rounded-lg bg-zinc-50 px-3 py-2.5 ring-1 ring-zinc-200/80">
+              <span className="grid h-9 w-9 shrink-0 place-items-center rounded-md bg-zinc-950 text-xs font-black text-white shadow-sm">
                 {getInitial(user)}
               </span>
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-sm font-extrabold">{user?.name || user?.email || 'HireFlow User'}</span>
-                <span className="block truncate text-xs font-medium text-zinc-500">HR Director</span>
+                <span className="block truncate text-sm font-extrabold leading-5">{user?.name || user?.email || 'HireFlow User'}</span>
+                <span className="block truncate text-xs font-semibold text-zinc-500">HR Director</span>
               </span>
+              <button
+                type="button"
+                onClick={handleLogout}
+                className="grid h-9 w-9 shrink-0 place-items-center rounded-md text-zinc-500 transition hover:bg-white hover:text-zinc-950 hover:shadow-sm focus:outline-none focus:ring-2 focus:ring-zinc-300"
+                aria-label="Logout"
+                title="Logout"
+              >
+                <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
+                  <path fill="currentColor" d="M4 3h7a1 1 0 0 1 1 1v3h-2V5H6v10h4v-2h2v3a1 1 0 0 1-1 1H4V3Zm10.3 4.3 3 3a1 1 0 0 1 0 1.4l-3 3-1.4-1.4 1.3-1.3H9v-2h5.2l-1.3-1.3 1.4-1.4Z" />
+                </svg>
+              </button>
             </div>
-            <button
-              type="button"
-              onClick={handleLogout}
-              className={`mt-3 w-full gap-2 ${buttonSecondaryClassName}`}
-            >
-              <svg viewBox="0 0 20 20" className="h-4 w-4" aria-hidden="true">
-                <path fill="currentColor" d="M8 3h7a1 1 0 0 1 1 1v3h-2V5H8v10h6v-2h2v3a1 1 0 0 1-1 1H8a1 1 0 0 1-1-1v-3H3v-2h4V9H3V7h4V4a1 1 0 0 1 1-1Zm6.6 5.4L17.2 11l-2.6 2.6-1.4-1.4.2-.2H9v-2h4.4l-.2-.2 1.4-1.4Z" />
-              </svg>
-              <span>Logout</span>
-            </button>
           </div>
         </aside>
 
