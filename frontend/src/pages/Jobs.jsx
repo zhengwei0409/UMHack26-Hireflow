@@ -10,7 +10,7 @@ import {
 import { formatDate } from '../utils/dateFormat';
 
 const inputClassName =
-  'min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm font-semibold text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
+  'job-form-control min-h-[44px] w-full rounded-lg border border-zinc-200 bg-white px-3.5 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:ring-2 focus:ring-zinc-950/10';
 
 const textareaClassName = `${inputClassName} min-h-[120px] py-3`;
 const primaryButtonClassName = `${buttonPrimaryClassName} primary-cta`;
@@ -26,6 +26,17 @@ const initialChatMessages = [
       'Describe the role you want to create. Include title, department, location, closing date, responsibilities, and requirements if you have them.',
   },
 ];
+
+const initialManualJobForm = {
+  title: '',
+  department: '',
+  location: '',
+  closingDate: '',
+  description: '',
+  requirements: '',
+  autoScreenThreshold: 60,
+  shortlistSize: 10,
+};
 
 const statusOptions = [
   ['ALL', 'All roles'],
@@ -136,8 +147,10 @@ const Jobs = () => {
   const [showForm, setShowForm] = useState(() => searchParams.get('create') === '1');
   const [submitting, setSubmitting] = useState(false);
   const [filters, setFilters] = useState({ status: 'ALL', query: '' });
+  const [createMode, setCreateMode] = useState('chat');
   const [chatMessages, setChatMessages] = useState(initialChatMessages);
   const [chatInput, setChatInput] = useState('');
+  const [manualJobForm, setManualJobForm] = useState(initialManualJobForm);
   const [createdJob, setCreatedJob] = useState(null);
   const [collapsedSections, setCollapsedSections] = useState({
     open: false,
@@ -222,6 +235,51 @@ const Jobs = () => {
           content: 'Could not create the job from this chat. Please add more details or try again.',
         },
       ]);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const updateManualJobForm = (field, value) => {
+    setManualJobForm((current) => ({ ...current, [field]: value }));
+  };
+
+  const handleManualSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    const requirements = manualJobForm.requirements
+      .split('\n')
+      .map((requirement) => requirement.trim())
+      .filter(Boolean);
+
+    if (requirements.length === 0) {
+      setError('Please add at least one requirement.');
+      return;
+    }
+
+    setError('');
+    setSubmitting(true);
+    setCreatedJob(null);
+
+    try {
+      const createRes = await api.jobs.create({
+        title: manualJobForm.title.trim(),
+        department: manualJobForm.department.trim(),
+        location: manualJobForm.location.trim(),
+        closingDate: manualJobForm.closingDate,
+        description: manualJobForm.description.trim(),
+        requirements,
+        autoScreenThreshold: Number(manualJobForm.autoScreenThreshold),
+        shortlistSize: Number(manualJobForm.shortlistSize),
+      });
+
+      setCreatedJob(createRes.data);
+      setManualJobForm(initialManualJobForm);
+      await loadJobs();
+      setShowForm(false);
+    } catch (err) {
+      setError(err.message);
     } finally {
       setSubmitting(false);
     }
@@ -349,43 +407,231 @@ const Jobs = () => {
 
         {showForm && (
           <section className="job-page-enter rounded-xl border border-zinc-200 bg-white p-5 shadow-sm sm:p-6">
-            <div className="mb-6 flex flex-col gap-2">
-              <h2 className="app-section-title text-2xl text-zinc-950">Create job</h2>
-              <p className="text-sm font-semibold leading-6 text-zinc-600">
-                GLM will ask for missing details. When enough information is available, the job is created automatically.
-              </p>
+            <div className="mb-6 flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="grid gap-2">
+                <h2 className="app-section-title text-2xl text-zinc-950">Create job</h2>
+                <p className="text-sm font-semibold leading-6 text-zinc-600">
+                  Choose GLM chat for guided creation, or fill the job details manually.
+                </p>
+              </div>
+
+              <div className="inline-grid min-h-11 grid-cols-2 rounded-lg border border-zinc-200 bg-zinc-100 p-1 text-sm font-semibold text-zinc-600">
+                <button
+                  type="button"
+                  className={`cursor-pointer rounded-md px-4 transition ${
+                    createMode === 'chat' ? 'bg-white text-zinc-950 shadow-sm' : 'hover:bg-white/70 hover:text-zinc-950'
+                  }`}
+                  onClick={() => {
+                    setCreateMode('chat');
+                    setError('');
+                    setCreatedJob(null);
+                  }}
+                >
+                  Chat with GLM
+                </button>
+                <button
+                  type="button"
+                  className={`cursor-pointer rounded-md px-4 transition ${
+                    createMode === 'manual' ? 'bg-white text-zinc-950 shadow-sm' : 'hover:bg-white/70 hover:text-zinc-950'
+                  }`}
+                  onClick={() => {
+                    setCreateMode('manual');
+                    setError('');
+                    setCreatedJob(null);
+                  }}
+                >
+                  Manual form
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-4">
-              <div className="job-chat-surface max-h-[420px] overflow-y-auto rounded-xl border border-zinc-200 bg-zinc-50 p-4">
-                <div className="grid gap-3">
-                  {chatMessages.map((message, index) => (
-                    <div
-                      key={`${message.role}-${index}-${message.content.slice(0, 12)}`}
-                      className={`job-chat-bubble max-w-[88%] rounded-xl px-4 py-3 text-sm font-semibold leading-6 ${
-                        message.role === 'user'
-                          ? 'job-chat-bubble-user justify-self-end bg-zinc-950 text-white'
-                          : 'job-chat-bubble-assistant justify-self-start border border-zinc-200 bg-white text-zinc-700'
-                      }`}
-                      style={{ animationDelay: `${Math.min(index * 45, 220)}ms` }}
+              {createMode === 'chat' ? (
+                <form onSubmit={handleChatSubmit} className="job-chat-shell overflow-hidden rounded-xl border border-zinc-200 bg-white shadow-sm">
+                  <div className="job-chat-surface max-h-[460px] min-h-[260px] overflow-y-auto p-4 sm:p-5">
+                    <div className="grid gap-3">
+                      {chatMessages.map((message, index) => (
+                        <div
+                          key={`${message.role}-${index}-${message.content.slice(0, 12)}`}
+                          className={`job-chat-bubble max-w-[88%] rounded-xl px-4 py-3 text-sm font-medium leading-6 ${
+                            message.role === 'user'
+                              ? 'job-chat-bubble-user justify-self-end bg-zinc-950 text-white'
+                              : 'job-chat-bubble-assistant justify-self-start border border-zinc-200 bg-white text-zinc-700'
+                          }`}
+                          style={{ animationDelay: `${Math.min(index * 45, 220)}ms` }}
+                        >
+                          <p className="whitespace-pre-line">{message.content}</p>
+                        </div>
+                      ))}
+                      {submitting && (
+                        <div className="job-chat-bubble job-chat-bubble-assistant justify-self-start rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-medium text-zinc-500">
+                          <span className="inline-flex items-center gap-2">
+                            <span>GLM is checking the job details</span>
+                            <span className="job-thinking-dots" aria-hidden="true">
+                              <span />
+                              <span />
+                              <span />
+                            </span>
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="border-t border-zinc-200 bg-white p-3 sm:p-4">
+                    <textarea
+                      className="job-chat-composer job-form-control min-h-[92px] w-full resize-none rounded-lg border border-zinc-200 bg-zinc-50 px-3.5 py-3 text-sm text-zinc-900 outline-none transition placeholder:text-zinc-400 focus:border-zinc-950 focus:bg-white focus:ring-2 focus:ring-zinc-950/10"
+                      value={chatInput}
+                      onChange={(e) => setChatInput(e.target.value)}
+                      placeholder="Message GLM with the role details..."
+                      rows={3}
+                      disabled={submitting}
+                    />
+
+                    <div className="mt-3 flex flex-wrap items-center justify-end gap-3">
+                      <button
+                        type="button"
+                        className={secondaryButtonClassName}
+                        onClick={resetJobChat}
+                        disabled={submitting}
+                      >
+                        Start over
+                      </button>
+                      <button
+                        type="submit"
+                        className={primaryButtonClassName}
+                        disabled={submitting || !chatInput.trim()}
+                      >
+                        {submitting ? 'Checking...' : 'Send to GLM'}
+                      </button>
+                    </div>
+                  </div>
+                </form>
+              ) : (
+                <form onSubmit={handleManualSubmit} className="job-manual-form-enter grid gap-4">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                      <span>Job title</span>
+                      <input
+                        className={inputClassName}
+                        value={manualJobForm.title}
+                        onChange={(e) => updateManualJobForm('title', e.target.value)}
+                        placeholder="Backend Engineer"
+                        required
+                        disabled={submitting}
+                      />
+                    </label>
+
+                    <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                      <span>Department</span>
+                      <input
+                        className={inputClassName}
+                        value={manualJobForm.department}
+                        onChange={(e) => updateManualJobForm('department', e.target.value)}
+                        placeholder="Engineering"
+                        required
+                        disabled={submitting}
+                      />
+                    </label>
+
+                    <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                      <span>Location</span>
+                      <input
+                        className={inputClassName}
+                        value={manualJobForm.location}
+                        onChange={(e) => updateManualJobForm('location', e.target.value)}
+                        placeholder="Kuala Lumpur"
+                        required
+                        disabled={submitting}
+                      />
+                    </label>
+
+                    <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                      <span>Closing date</span>
+                      <input
+                        type="date"
+                        className={inputClassName}
+                        value={manualJobForm.closingDate}
+                        onChange={(e) => updateManualJobForm('closingDate', e.target.value)}
+                        required
+                        disabled={submitting}
+                      />
+                    </label>
+                  </div>
+
+                  <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                    <span>Description</span>
+                    <textarea
+                      className={textareaClassName}
+                      value={manualJobForm.description}
+                      onChange={(e) => updateManualJobForm('description', e.target.value)}
+                      placeholder="Describe what this person will do, team context, and core responsibilities."
+                      rows={5}
+                      required
+                      disabled={submitting}
+                    />
+                  </label>
+
+                  <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                    <span>Requirements</span>
+                    <textarea
+                      className={textareaClassName}
+                      value={manualJobForm.requirements}
+                      onChange={(e) => updateManualJobForm('requirements', e.target.value)}
+                      placeholder={'3+ years Node.js experience\nPostgreSQL or similar database experience\nStrong API design skills'}
+                      rows={5}
+                      required
+                      disabled={submitting}
+                    />
+                  </label>
+
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                      <span>Auto-screen threshold</span>
+                      <input
+                        type="number"
+                        min="0"
+                        max="100"
+                        className={inputClassName}
+                        value={manualJobForm.autoScreenThreshold}
+                        onChange={(e) => updateManualJobForm('autoScreenThreshold', e.target.value)}
+                        required
+                        disabled={submitting}
+                      />
+                    </label>
+
+                    <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
+                      <span>Shortlist size</span>
+                      <input
+                        type="number"
+                        min="1"
+                        className={inputClassName}
+                        value={manualJobForm.shortlistSize}
+                        onChange={(e) => updateManualJobForm('shortlistSize', e.target.value)}
+                        required
+                        disabled={submitting}
+                      />
+                    </label>
+                  </div>
+
+                  <div className="flex flex-wrap items-center justify-end gap-3 pt-1">
+                    <button
+                      type="button"
+                      className={secondaryButtonClassName}
+                      onClick={() => {
+                        setManualJobForm(initialManualJobForm);
+                        setError('');
+                      }}
+                      disabled={submitting}
                     >
-                      <p className="whitespace-pre-line">{message.content}</p>
-                    </div>
-                  ))}
-                  {submitting && (
-                    <div className="job-chat-bubble job-chat-bubble-assistant justify-self-start rounded-xl border border-zinc-200 bg-white px-4 py-3 text-sm font-semibold text-zinc-500">
-                      <span className="inline-flex items-center gap-2">
-                        <span>GLM is checking the job details</span>
-                        <span className="job-thinking-dots" aria-hidden="true">
-                          <span />
-                          <span />
-                          <span />
-                        </span>
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
+                      Clear form
+                    </button>
+                    <button type="submit" className={primaryButtonClassName} disabled={submitting}>
+                      {submitting ? 'Creating...' : 'Create job'}
+                    </button>
+                  </div>
+                </form>
+              )}
 
               {error && (
                 <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
@@ -398,38 +644,6 @@ const Jobs = () => {
                   Job created: {createdJob.title}
                 </div>
               )}
-
-              <form onSubmit={handleChatSubmit} className="grid gap-3">
-                <label className="grid gap-2 text-xs font-black uppercase tracking-[0.18em] text-zinc-500">
-                  <span>Message GLM</span>
-                  <textarea
-                    className={`job-chat-composer ${textareaClassName} min-h-[104px]`}
-                    value={chatInput}
-                    onChange={(e) => setChatInput(e.target.value)}
-                    placeholder="Example: Create a Backend Engineer role for Engineering in Kuala Lumpur. They will build APIs, work with PostgreSQL, and need 3+ years Node.js experience."
-                    rows={4}
-                    disabled={submitting}
-                  />
-                </label>
-
-                <div className="flex flex-wrap items-center gap-3 pt-1">
-                  <button
-                    type="submit"
-                    className={primaryButtonClassName}
-                    disabled={submitting || !chatInput.trim()}
-                  >
-                    {submitting ? 'Checking...' : 'Send to GLM'}
-                  </button>
-                  <button
-                    type="button"
-                    className={secondaryButtonClassName}
-                    onClick={resetJobChat}
-                    disabled={submitting}
-                  >
-                    Start over
-                  </button>
-                </div>
-              </form>
             </div>
           </section>
         )}

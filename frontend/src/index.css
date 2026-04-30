@@ -816,6 +816,23 @@ a {
   pointer-events: none;
 }
 
+.job-form-control {
+  font-family: var(--font-ui);
+  font-size: 0.875rem;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.5;
+}
+
+.job-form-control::placeholder {
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.job-manual-form-enter {
+  animation: job-manual-form-enter 240ms ease-out both;
+}
+
 .job-chat-bubble {
   position: relative;
   overflow: hidden;
@@ -1032,6 +1049,18 @@ a {
   }
 }
 
+@keyframes job-manual-form-enter {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 @keyframes status-badge-shimmer {
   0% {
     background-position: 120% 0;
@@ -1173,8 +1202,9 @@ a {
   .pipeline-connector-active::after,
   .job-page-enter,
   .job-row,
-  .job-metric-pop,
-  .job-chat-bubble,
+	  .job-metric-pop,
+	  .job-manual-form-enter,
+	  .job-chat-bubble,
   .job-chat-bubble-assistant::after,
   .job-thinking-dots span,
   .status-badge-working,
@@ -1183,9 +1213,9 @@ a {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .candidate-row,
-  .candidate-open-button,
-  .job-row,
+	  .candidate-row,
+	  .candidate-open-button,
+	  .job-row,
   .job-open-button,
   .job-chat-composer {
     transition: none;
