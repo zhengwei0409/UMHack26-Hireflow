@@ -23,8 +23,14 @@ const authHighlights = [
   'Secure HR workspace',
 ];
 
+const isValidEmail = (value) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+
 const Login = () => {
   const shellRef = useRef(null);
+  const nameInputRef = useRef(null);
+  const emailInputRef = useRef(null);
+  const passwordInputRef = useRef(null);
+  const termsInputRef = useRef(null);
   const [isRegister, setIsRegister] = useState(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -42,13 +48,42 @@ const Login = () => {
     e.preventDefault();
     setError('');
 
+    const cleanName = name.trim();
+    const cleanEmail = email.trim();
+
+    if (isRegister && !cleanName) {
+      setError('Please enter your name.');
+      nameInputRef.current?.focus();
+      return;
+    }
+
+    if (!cleanEmail) {
+      setError('Please enter your email address.');
+      emailInputRef.current?.focus();
+      return;
+    }
+
+    if (!isValidEmail(cleanEmail)) {
+      setError('Please enter a valid email address.');
+      emailInputRef.current?.focus();
+      return;
+    }
+
+    if (!password) {
+      setError('Please enter your password.');
+      passwordInputRef.current?.focus();
+      return;
+    }
+
     if (isRegister && !passwordHint.isValid) {
       setError(passwordHint.message);
+      passwordInputRef.current?.focus();
       return;
     }
 
     if (isRegister && !agreeToTerms) {
       setError('Please agree to the Terms of Service and Privacy Policy.');
+      termsInputRef.current?.focus();
       return;
     }
 
@@ -56,9 +91,9 @@ const Login = () => {
 
     try {
       if (isRegister) {
-        await register(email, password, name);
+        await register(cleanEmail, password, cleanName);
       } else {
-        await login(email, password);
+        await login(cleanEmail, password);
       }
       navigate('/dashboard');
     } catch (err) {
@@ -80,11 +115,6 @@ const Login = () => {
     setPassword('');
     setAgreeToTerms(false);
   };
-
-  const passwordChecks = [
-    { label: '8+ characters', active: password.length >= 8 },
-    { label: 'Special symbol', active: /[^A-Za-z0-9]/.test(password) },
-  ];
 
   const handlePointerMove = (event) => {
     const node = shellRef.current;
@@ -124,7 +154,7 @@ const Login = () => {
         aria-hidden="true"
       />
 
-      <header className="relative z-10 flex min-h-20 items-center justify-between px-5 py-5 sm:px-8 lg:px-12">
+      <header className="relative z-10 grid min-h-[76px] grid-cols-[1fr_auto] items-center gap-4 px-6 py-4 sm:px-10 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:px-16">
         <button
           type="button"
           className="group inline-flex items-center gap-3 text-left"
@@ -138,51 +168,53 @@ const Login = () => {
             </svg>
           </span>
           <span>
-            <span className="block text-xl font-black leading-none tracking-[-0.04em] text-[#111827] transition group-hover:tracking-[-0.02em]">
+            <span className="block text-lg font-black leading-none tracking-[-0.03em] text-[#111827] transition group-hover:tracking-[-0.01em] sm:text-xl">
               HireFlow
             </span>
           </span>
         </button>
 
-        <div className="auth-toggle-shell hidden sm:flex">
-          <span className={`auth-toggle-indicator ${isRegister ? 'is-register' : 'is-login'}`} aria-hidden="true" />
-          <button
-            type="button"
-            className={`auth-toggle-button ${authButtonTextClassName} ${!isRegister ? 'is-active' : ''}`}
-            onClick={() => switchMode('login')}
-          >
-            Log In
-          </button>
-          <button
-            type="button"
-            className={`auth-toggle-button ${authButtonTextClassName} ${isRegister ? 'is-active' : ''}`}
-            onClick={() => switchMode('register')}
-          >
-            Sign Up
-          </button>
+        <div className="hidden justify-end sm:flex lg:mx-auto lg:w-full lg:max-w-[520px]">
+          <div className="auth-toggle-shell">
+            <span className={`auth-toggle-indicator ${isRegister ? 'is-register' : 'is-login'}`} aria-hidden="true" />
+            <button
+              type="button"
+              className={`auth-toggle-button ${authButtonTextClassName} ${!isRegister ? 'is-active' : ''}`}
+              onClick={() => switchMode('login')}
+            >
+              Log In
+            </button>
+            <button
+              type="button"
+              className={`auth-toggle-button ${authButtonTextClassName} ${isRegister ? 'is-active' : ''}`}
+              onClick={() => switchMode('register')}
+            >
+              Sign Up
+            </button>
+          </div>
         </div>
       </header>
 
-      <main className="relative z-10 grid min-h-[calc(100svh-96px)] items-center gap-10 px-5 pb-10 pt-4 sm:px-8 lg:grid-cols-[1.05fr_0.95fr] lg:px-12 lg:pb-12">
-        <section className="mx-auto hidden w-full max-w-2xl animate-auth-rise lg:block" aria-label="HireFlow overview">
-          <p className="mb-5 inline-flex rounded-full border border-[#d7d7d7] bg-white/70 px-4 py-2 text-xs font-black uppercase tracking-[0.22em] text-[#4d4a82] shadow-[0_12px_30px_rgba(17,24,39,0.06)] backdrop-blur">
+      <main className="relative z-10 grid min-h-[calc(100svh-76px)] items-center gap-10 px-6 pb-10 pt-4 sm:px-10 sm:pb-12 lg:grid-cols-[1.05fr_0.95fr] lg:px-16 lg:py-8">
+        <section className="hidden w-full max-w-2xl animate-auth-rise lg:block" aria-label="HireFlow overview">
+          <p className="mb-4 inline-flex rounded-full border border-[#d7d7d7] bg-white/70 px-4 py-2 text-[11px] font-black uppercase tracking-[0.18em] text-[#4d4a82] shadow-[0_12px_30px_rgba(17,24,39,0.06)] backdrop-blur">
             Premium hiring command center
           </p>
-          <h1 className="app-page-title max-w-xl text-6xl text-[#111827] xl:text-7xl">
+          <h1 className="app-page-title max-w-xl text-4xl text-[#111827] xl:text-5xl">
             Manage hiring in one simple workspace.
           </h1>
-          <p className="mt-6 max-w-lg text-lg font-semibold leading-8 text-[#6b7280]">
+          <p className="mt-4 max-w-lg text-sm font-semibold leading-6 text-[#6b7280]">
             Turn screening, ranking, and interview flow into one focused workspace for modern HR teams.
           </p>
 
-          <div className="mt-10 grid max-w-xl gap-3">
+          <div className="mt-7 grid max-w-xl gap-1">
             {authHighlights.map((item, index) => (
               <div
                 key={item}
-                className="group flex items-center justify-between border-b border-[#d7d7d7]/80 py-5 auth-stagger"
+                className="group flex items-center justify-between border-b border-[#d7d7d7]/80 py-3 auth-stagger"
                 style={{ animationDelay: `${180 + index * 110}ms` }}
               >
-                <span className="text-sm font-black uppercase tracking-[0.18em] text-[#777777]">{item}</span>
+                <span className="text-xs font-black uppercase tracking-[0.16em] text-[#777777]">{item}</span>
                 <span
                   className="pointer-events-none inline-flex items-center gap-2 text-[#9a9a9a] transition duration-300 group-hover:translate-x-1 group-hover:text-[#111827]"
                   aria-hidden="true"
@@ -194,16 +226,20 @@ const Login = () => {
             ))}
           </div>
 
-          <div className="mt-12 flex items-end gap-5">
-            <div className="relative h-32 w-32 overflow-hidden rounded-xl bg-[#111827] shadow-[0_30px_80px_rgba(17,24,39,0.22)]">
+          <div className="mt-7 flex items-end gap-5">
+            <div className="relative h-28 w-28 overflow-hidden rounded-xl bg-[#111827] shadow-[0_30px_80px_rgba(17,24,39,0.22)]">
               <div className="absolute inset-x-5 top-6 h-2 rounded-full bg-white/70" />
-              <div className="absolute inset-x-5 top-12 h-2 rounded-full bg-white/35" />
-              <div className="absolute bottom-5 left-5 h-11 w-11 rounded-lg bg-white/90 auth-pulse-soft" />
-              <div className="absolute bottom-5 right-5 h-11 w-11 rounded-lg border border-white/35" />
+              <div className="absolute left-5 top-12 h-12 w-3 rounded-full bg-white/25" />
+              <div className="absolute left-12 right-5 top-12 grid gap-2">
+                <div className="h-2 rounded-full bg-white/55" />
+                <div className="h-2 w-4/5 rounded-full bg-white/35" />
+                <div className="h-2 w-3/5 rounded-full bg-white/25" />
+              </div>
+              <div className="auth-pulse-soft absolute bottom-5 right-5 h-4 w-4 rounded-full bg-white/90 shadow-[0_0_0_6px_rgba(255,255,255,0.14)]" />
             </div>
             <div className="pb-2">
-              <p className="text-4xl font-black tracking-[-0.06em] text-[#111827]">2.4x</p>
-              <p className="mt-1 max-w-44 text-sm font-bold leading-6 text-[#777777]">
+              <p className="text-3xl font-black tracking-[-0.04em] text-[#111827]">2.4x</p>
+              <p className="mt-1 max-w-44 text-xs font-bold leading-5 text-[#777777]">
                 faster shortlist review with guided workflow states.
               </p>
             </div>
@@ -211,21 +247,21 @@ const Login = () => {
         </section>
 
         <section
-          className="relative mx-auto w-full max-w-[480px] overflow-hidden rounded-xl border border-white/80 bg-white/78 px-6 py-7 shadow-[0_32px_90px_rgba(17,24,39,0.14)] backdrop-blur-2xl animate-auth-rise sm:px-8 sm:py-9"
+          className="relative mx-auto w-full max-w-[500px] overflow-hidden rounded-xl border border-white/80 bg-white/78 px-6 py-7 shadow-[0_32px_90px_rgba(17,24,39,0.14)] backdrop-blur-2xl animate-auth-rise sm:px-9 sm:py-8"
           aria-labelledby="auth-title"
         >
           <div className="pointer-events-none absolute inset-x-5 top-0 h-[2px] overflow-hidden rounded-full bg-[#111827]/8" aria-hidden="true">
             <div className="h-full w-40 rounded-full bg-gradient-to-r from-transparent via-[#111827]/80 to-transparent auth-sheen" />
           </div>
           <div key={mode} className="auth-mode-panel">
-            <div className="mb-6 text-center">
-              <p className="mb-3 text-xs font-black uppercase tracking-[0.24em] text-[#4d4a82]">
+            <div className="mb-4 text-center">
+              <p className="mb-2 text-[11px] font-black uppercase tracking-[0.2em] text-[#4d4a82]">
                 {isRegister ? 'Start your workspace' : 'Welcome back'}
               </p>
-              <h2 id="auth-title" className="app-section-title text-4xl text-[#191919]">
+              <h2 id="auth-title" className="app-section-title text-2xl text-[#191919] sm:text-3xl">
                 {isRegister ? 'Create account' : 'Log in to HireFlow'}
               </h2>
-              <p className="mx-auto mt-3 max-w-sm text-sm font-semibold leading-6 text-[#777777]">
+              <p className="mx-auto mt-2 max-w-sm text-xs font-semibold leading-5 text-[#777777] sm:text-sm">
                 {isRegister
                   ? 'Create your HR command center and start moving candidates with clarity.'
                   : 'Continue screening, ranking, and managing interviews from one workspace.'}
@@ -238,43 +274,46 @@ const Login = () => {
               </div>
             )}
 
-            <form onSubmit={handleSubmit} className="grid gap-4">
+            <form onSubmit={handleSubmit} noValidate className="grid gap-2.5">
               {isRegister && (
-                <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
+                <label className="group grid gap-1.5 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
                   <span>Name</span>
                   <input
-                    className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-medium normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                    ref={nameInputRef}
+                    className="min-h-11 w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-sm !font-normal normal-case tracking-normal text-[#2f2f2f] outline-none transition duration-300 placeholder:!font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    required
+                    aria-required="true"
                     placeholder="Alex Rivera"
                     autoComplete="name"
                   />
                 </label>
               )}
 
-              <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
+              <label className="group grid gap-1.5 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
                 <span>Email address</span>
                 <input
-                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-medium normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                  ref={emailInputRef}
+                  className="min-h-11 w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-sm !font-normal normal-case tracking-normal text-[#2f2f2f] outline-none transition duration-300 placeholder:!font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  required
+                  aria-required="true"
                   placeholder="name@company.com"
                   autoComplete="email"
                 />
               </label>
 
-              <label className="group grid gap-2 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
+              <label className="group grid gap-1.5 text-xs font-black uppercase tracking-[0.12em] text-[#6a6a6a]">
                 <span>Password</span>
                 <input
-                  className="min-h-[54px] w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-base font-medium normal-case tracking-normal text-[#171717] outline-none transition duration-300 placeholder:font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
+                  ref={passwordInputRef}
+                  className="min-h-11 w-full rounded-lg border border-[#d2d2d2] bg-white/90 px-4 text-sm !font-normal normal-case tracking-normal text-[#2f2f2f] outline-none transition duration-300 placeholder:!font-normal placeholder:text-[#9b9b9b] focus:-translate-y-0.5 focus:border-[#111827] focus:bg-white focus:shadow-[0_16px_40px_rgba(17,24,39,0.10)] focus:ring-4 focus:ring-[#111827]/10"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  required
+                  aria-required="true"
                   placeholder="Password"
                   autoComplete={isRegister ? 'new-password' : 'current-password'}
                 />
@@ -282,40 +321,26 @@ const Login = () => {
 
               {isRegister && (
                 <>
-                  <div className="-mt-1 flex flex-wrap gap-2">
-                    {passwordChecks.map((check) => (
-                      <span
-                        key={check.label}
-                        className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${
-                          check.active
-                            ? 'border-emerald-200 bg-emerald-50 text-emerald-700'
-                            : 'border-[#dedede] bg-white text-[#8a8a8a]'
-                        }`}
-                      >
-                        {check.label}
-                      </span>
-                    ))}
-                  </div>
-
-                  <p className={`text-sm font-bold ${passwordHint.isValid ? 'text-emerald-600' : 'text-[#8a8a8a]'}`}>
-                    {passwordHint.message}
+                  <p className={`-mt-0.5 text-xs font-medium ${passwordHint.isValid ? 'text-emerald-600' : 'text-[#8a8a8a]'}`}>
+                    8+ characters and one special symbol
                   </p>
 
-                  <label className="flex items-start gap-3 rounded-lg border border-[#ececec] bg-[#f8f8f8]/70 px-4 py-3 text-xs font-semibold leading-relaxed text-[#777777]">
+                  <label className="flex cursor-pointer items-start gap-2.5 pt-1 text-xs font-medium leading-relaxed text-[#777777] transition duration-200 hover:text-[#111827]">
                     <input
-                      className="mt-0.5 h-5 w-5 shrink-0 rounded border-[#cfcfcf] accent-black"
+                      ref={termsInputRef}
+                      className="mt-0.5 h-4 w-4 shrink-0 cursor-pointer rounded border-[#cfcfcf] accent-black"
                       type="checkbox"
                       checked={agreeToTerms}
                       onChange={(e) => setAgreeToTerms(e.target.checked)}
-                      required
+                      aria-required="true"
                     />
                     <span>
                       I agree to the{' '}
-                      <a className="font-black text-[#273b72]" href="#">
+                      <a className="font-semibold text-[#4d4a82]" href="#">
                         Terms of Service
                       </a>{' '}
                       and{' '}
-                      <a className="font-black text-[#273b72]" href="#">
+                      <a className="font-semibold text-[#4d4a82]" href="#">
                         Privacy Policy
                       </a>
                       .
@@ -326,13 +351,13 @@ const Login = () => {
 
               {!isRegister && (
                 <div className="flex items-center justify-between gap-4">
-                  <label className="inline-flex items-center gap-2.5 text-sm font-bold text-[#777777]">
-                    <input className="h-4 w-4 accent-black" type="checkbox" />
+                  <label className="inline-flex cursor-pointer items-center gap-2.5 text-sm font-medium text-[#777777] transition duration-200 hover:text-[#111827]">
+                    <input className="h-4 w-4 cursor-pointer accent-black" type="checkbox" />
                     <span>Remember Me</span>
                   </label>
                   <button
                     type="button"
-                    className="shrink-0 text-xs font-black tracking-normal text-[#4d4a82] transition hover:text-[#111827]"
+                    className="shrink-0 cursor-pointer text-xs font-black tracking-normal text-[#4d4a82] underline decoration-transparent underline-offset-4 transition duration-200 hover:-translate-y-0.5 hover:text-[#111827] hover:decoration-[#111827]/35"
                   >
                     Forgot Password
                   </button>
@@ -341,7 +366,7 @@ const Login = () => {
 
               <button
                 type="submit"
-                className="group relative mt-1 inline-flex min-h-14 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-0 bg-[#111827] text-sm font-black tracking-[0.03em] text-white shadow-[0_22px_45px_rgba(17,24,39,0.22)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#171717] hover:shadow-[0_28px_60px_rgba(17,24,39,0.28)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
+                className="group relative mt-1 inline-flex min-h-12 w-full cursor-pointer items-center justify-center overflow-hidden rounded-lg border-0 bg-[#111827] text-sm font-black tracking-[0.03em] text-white shadow-[0_10px_22px_rgba(17,24,39,0.14)] transition duration-300 hover:-translate-y-0.5 hover:bg-[#171717] hover:shadow-[0_14px_28px_rgba(17,24,39,0.18)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
                 disabled={loading}
                 aria-busy={loading}
               >
@@ -358,13 +383,13 @@ const Login = () => {
               </button>
             </form>
 
-            <div className="my-6 flex items-center gap-3 text-center text-xs font-black tracking-[0.16em] text-[#8a8a8a] before:h-px before:flex-1 before:bg-[#dedede] after:h-px after:flex-1 after:bg-[#dedede]">
+            <div className="my-3 flex items-center gap-3 text-center text-[11px] font-black tracking-[0.14em] text-[#8a8a8a] before:h-px before:flex-1 before:bg-[#dedede] after:h-px after:flex-1 after:bg-[#dedede]">
               <span>OR CONTINUE WITH</span>
             </div>
 
             <button
               type="button"
-              className="inline-flex min-h-[52px] w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-[#d4d4d4] bg-white/90 text-sm font-black tracking-[0.03em] text-[#2a2a2a] shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-[#111827]/30 hover:bg-white hover:shadow-[0_16px_38px_rgba(17,24,39,0.10)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
+              className="inline-flex min-h-11 w-full cursor-pointer items-center justify-center gap-3 rounded-lg border border-[#d4d4d4] bg-white/90 text-sm font-black tracking-[0.03em] text-[#2a2a2a] shadow-sm transition duration-300 hover:-translate-y-0.5 hover:border-[#111827]/30 hover:bg-white hover:shadow-[0_16px_38px_rgba(17,24,39,0.10)] active:translate-y-0 active:scale-[0.985] disabled:cursor-wait disabled:opacity-70"
               onClick={handleGoogleSignIn}
               disabled={googleLoading}
               aria-busy={googleLoading}
@@ -394,7 +419,7 @@ const Login = () => {
               {googleLoading ? 'Connecting...' : 'Google'}
             </button>
 
-            <p className="mt-6 text-center text-sm font-bold text-[#777777]">
+            <p className="mt-5 text-center text-sm font-bold text-[#777777] sm:hidden">
               {isRegister ? 'Already have an account?' : "Don't have an account?"}{' '}
               <button
                 type="button"
