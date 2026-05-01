@@ -13,6 +13,7 @@ const NEXT_ACTIONS: Record<string, string[]> = {
   INTERVIEW_RESCHEDULE_REQUESTED: ['Review and reschedule interview'],
   CV_REJECTED: [],
   OFFER_GENERATING: ['Offer letter will be generated automatically'],
+  OFFER_SENT: ['Mark candidate as hired once the offer is accepted'],
   INTERVIEW_REJECTED: [],
   CV_PARSING: ['GLM analysis will start automatically'],
   INTERVIEW_DONE: ['HR can now accept or reject the candidate'],
@@ -47,6 +48,8 @@ async function handleAction(req: Request<{ id: string }>, res: Response, action:
       // No automation needed after marking interview done - just wait for HR decision
     } else if (action === 'advance-to-human-interview') {
       // HR accepted the candidate for a human interview. Scheduling is the next step.
+    } else if (action === 'mark-hired') {
+      // Offer accepted externally; HR can close the workflow as hired.
     }
 
     return res.status(200).json({
@@ -88,6 +91,9 @@ export const rejectInterview = (req: Request<{ id: string }>, res: Response) =>
 
 export const advanceToHumanInterview = (req: Request<{ id: string }>, res: Response) =>
   handleAction(req, res, 'advance-to-human-interview');
+
+export const markHired = (req: Request<{ id: string }>, res: Response) =>
+  handleAction(req, res, 'mark-hired');
 
 export const overrideAutoScreenPass = (req: Request<{ id: string }>, res: Response) =>
   handleAction(req, res, 'override-auto-screen-pass');

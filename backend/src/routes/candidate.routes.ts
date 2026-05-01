@@ -51,6 +51,7 @@ router.post('/:id/actions/mark-interview-done', requireAuth, workflowController.
 router.post('/:id/actions/accept-interview', requireAuth, workflowController.acceptInterview);
 router.post('/:id/actions/reject-interview', requireAuth, workflowController.rejectInterview);
 router.post('/:id/actions/advance-to-human-interview', requireAuth, workflowController.advanceToHumanInterview);
+router.post('/:id/actions/mark-hired', requireAuth, workflowController.markHired);
 router.post('/:id/actions/retry', requireAuth, workflowController.retry);
 
 // Public — candidate responds to interview

@@ -30,6 +30,7 @@ const STATUS_ACTIONS = {
     { key: 'accept-interview', label: 'Accept & Generate Offer', variant: 'success' },
     { key: 'reject-interview', label: 'Reject Candidate', variant: 'danger' },
   ],
+  OFFER_SENT: [{ key: 'mark-hired', label: 'Mark as Hired', variant: 'success' }],
   CV_PARSE_FAILED: [{ key: 'retry', label: 'Retry Analysis', variant: 'primary' }],
   INTERVIEW_INVITE_FAILED: [{ key: 'retry', label: 'Retry Invite', variant: 'primary' }],
   FAILED: [{ key: 'retry', label: 'Retry', variant: 'primary' }],
@@ -598,6 +599,9 @@ const CandidateDetail = () => {
           break;
         case 'mark-interview-done':
           action = api.candidates.markInterviewDone(id);
+          break;
+        case 'mark-hired':
+          action = api.candidates.markHired(id);
           break;
         case 'retry':
           action = api.candidates.retry(id);

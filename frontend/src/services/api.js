@@ -152,6 +152,12 @@ export const candidates = {
       headers: headers(),
     }).then(handleResponse),
 
+  markHired: (id) =>
+    fetch(`${API_BASE}/candidates/${id}/actions/mark-hired`, {
+      method: 'POST',
+      headers: headers(),
+    }).then(handleResponse),
+
   retry: (id) =>
     fetch(`${API_BASE}/candidates/${id}/actions/retry`, {
       method: 'POST',

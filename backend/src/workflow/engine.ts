@@ -45,6 +45,11 @@ const TRANSITIONS: Record<string, { from: State | State[]; to: State; event: str
     to: STATES.INTERVIEW_PENDING,
     event: 'HR_ACCEPT_FOR_HUMAN_INTERVIEW',
   },
+  'mark-hired': {
+    from: STATES.OFFER_SENT,
+    to: STATES.HIRED,
+    event: 'HR_MARK_HIRED',
+  },
   'override-auto-screen-pass': {
     from: STATES.CV_REJECTED,
     to: STATES.AI_INTERVIEW_INVITED,
