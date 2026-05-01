@@ -258,6 +258,21 @@ export const biasAudit = {
       headers: headers(),
     }).then(handleResponse);
   },
+
+  simulateThreshold: (threshold, jobId = null) => {
+    return fetch(`${API_BASE}/bias-audit/simulate`, {
+      method: 'POST',
+      headers: headers(),
+      body: JSON.stringify({ threshold, jobId }),
+    }).then(handleResponse);
+  },
+
+  getAIAnalysis: (jobId = null) => {
+    const query = jobId ? `?${new URLSearchParams({ jobId }).toString()}` : '';
+    return fetch(`${API_BASE}/bias-audit/ai-analysis${query}`, {
+      headers: headers(),
+    }).then(handleResponse);
+  },
 };
 
 export const candidatePortal = {
