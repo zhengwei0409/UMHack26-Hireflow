@@ -598,10 +598,10 @@ const CandidateDetail = () => {
           action = api.candidates.advanceToHumanInterview(id, note);
           break;
         case 'mark-interview-done':
-          action = api.candidates.markInterviewDone(id);
+          action = api.candidates.markInterviewDone(id, note);
           break;
         case 'mark-hired':
-          action = api.candidates.markHired(id);
+          action = api.candidates.markHired(id, note);
           break;
         case 'retry':
           action = api.candidates.retry(id);
@@ -653,10 +653,11 @@ const CandidateDetail = () => {
     setError('');
 
     try {
-      await api.candidates.scheduleInterview(id, scheduleData);
+      await api.candidates.scheduleInterview(id, { ...scheduleData, note });
       await loadData();
       setShowScheduleModal(false);
       setScheduleData({ date: '', time: '', location: '', meetingLink: '' });
+      setNote('');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -965,6 +966,11 @@ const CandidateDetail = () => {
                       <p className="mt-2 text-sm font-extrabold text-zinc-950">
                         {item.from || 'START'} → {item.to}
                       </p>
+                      {item.note && (
+                        <p className="mt-2 whitespace-pre-wrap text-sm font-medium leading-6 text-zinc-600">
+                          {item.note}
+                        </p>
+                      )}
                       <p className="mt-2 text-sm font-medium text-zinc-600">
                         by {item.triggeredBy} · {formatDateTime(item.at, '-')}
                       </p>
@@ -992,7 +998,7 @@ const CandidateDetail = () => {
                       className={`${fieldClassName} min-h-[110px]`}
                       value={note}
                       onChange={(e) => setNote(e.target.value)}
-                      placeholder="Add context for the next workflow action..."
+                      placeholder="Optional note for this decision, shown in the candidate status history..."
                       rows={4}
                     />
                   </label>

@@ -111,6 +111,10 @@ export async function getHistory(req: Request<{ id: string }>, res: Response) {
       event: h.event,
       triggeredBy: h.triggeredBy,
       at: h.createdAt,
+      note:
+        h.metadata && typeof h.metadata === 'object' && !Array.isArray(h.metadata)
+          ? (h.metadata as Record<string, unknown>).note
+          : undefined,
     }));
     return res.status(200).json({ success: true, data: formatted });
   } catch (err: any) {

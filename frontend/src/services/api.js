@@ -146,16 +146,18 @@ export const candidates = {
       body: JSON.stringify({ note }),
     }).then(handleResponse),
 
-  markInterviewDone: (id) =>
+  markInterviewDone: (id, note) =>
     fetch(`${API_BASE}/candidates/${id}/actions/mark-interview-done`, {
       method: 'POST',
       headers: headers(),
+      body: JSON.stringify({ note }),
     }).then(handleResponse),
 
-  markHired: (id) =>
+  markHired: (id, note) =>
     fetch(`${API_BASE}/candidates/${id}/actions/mark-hired`, {
       method: 'POST',
       headers: headers(),
+      body: JSON.stringify({ note }),
     }).then(handleResponse),
 
   retry: (id) =>
