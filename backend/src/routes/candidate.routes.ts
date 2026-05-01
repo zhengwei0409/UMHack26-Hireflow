@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { NextFunction, Request, Response, Router } from 'express';
 import multer from 'multer';
 import path from 'path';
 import { requireAuth } from '../middleware/auth.middleware';
@@ -22,15 +22,49 @@ const upload = multer({
     if (allowed.includes(path.extname(file.originalname).toLowerCase())) {
       cb(null, true);
     } else {
-      cb(new Error('Only PDF and DOCX files are allowed'));
+      cb(new Error('INVALID_CV_FILE_TYPE'));
     }
   },
 });
 
 const router = Router();
 
+const uploadCv = (req: Request, res: Response, next: NextFunction) => {
+  upload.single('cvFile')(req, res, (err: any) => {
+    if (!err) return next();
+
+    if (err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE') {
+      return res.status(413).json({
+        success: false,
+        error: {
+          code: 'CV_FILE_TOO_LARGE',
+          message: 'Your CV is too large. Please upload a PDF or DOCX file smaller than 5MB.',
+        },
+      });
+    }
+
+    if (err.message === 'INVALID_CV_FILE_TYPE') {
+      return res.status(400).json({
+        success: false,
+        error: {
+          code: 'INVALID_CV_FILE_TYPE',
+          message: 'Please upload your CV as a PDF or DOCX file only.',
+        },
+      });
+    }
+
+    return res.status(400).json({
+      success: false,
+      error: {
+        code: 'CV_UPLOAD_FAILED',
+        message: 'We could not upload your CV. Please try again with a PDF or DOCX file smaller than 5MB.',
+      },
+    });
+  });
+};
+
 // Public — candidate submits application
-router.post('/apply', upload.single('cvFile'), candidateController.applyToJob);
+router.post('/apply', uploadCv, candidateController.applyToJob);
 
 // Public — candidate downloads their own CV (using candidate ID as token)
 router.get('/:id/cv', candidateController.downloadCv);

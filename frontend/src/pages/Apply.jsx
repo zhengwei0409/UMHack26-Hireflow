@@ -10,9 +10,27 @@ const inputClassName =
 const fileInputClassName =
   'block w-full cursor-pointer rounded-md border border-dashed border-zinc-300 bg-zinc-50 px-4 py-4 text-sm font-semibold text-zinc-600 transition duration-200 file:mr-3 file:cursor-pointer file:rounded-md file:border-0 file:bg-black file:px-3.5 file:py-2 file:text-sm file:font-extrabold file:text-white file:shadow-sm file:transition file:duration-200 hover:-translate-y-0.5 hover:border-zinc-400 hover:bg-white hover:file:-translate-y-0.5 hover:file:bg-zinc-800 hover:file:shadow-[0_10px_22px_rgba(24,24,27,0.18)] active:translate-y-0 active:file:translate-y-0 active:file:scale-[0.97] focus-within:border-black focus-within:ring-2 focus-within:ring-black/10';
 
+const MAX_CV_SIZE = 5 * 1024 * 1024;
+const ALLOWED_CV_EXTENSIONS = ['pdf', 'docx'];
+
 const isJobClosed = (job) => {
   if (!job) return false;
   return String(job.status || '').toUpperCase() === 'CLOSED' || new Date(job.closingDate).getTime() <= Date.now();
+};
+
+const validateCvFile = (file) => {
+  if (!file) return 'Please upload your CV.';
+
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  if (!ALLOWED_CV_EXTENSIONS.includes(extension)) {
+    return 'Please upload your CV as a PDF or DOCX file only.';
+  }
+
+  if (file.size > MAX_CV_SIZE) {
+    return 'Your CV is too large. Please upload a PDF or DOCX file smaller than 5MB.';
+  }
+
+  return '';
 };
 
 const Apply = () => {
@@ -47,8 +65,9 @@ const Apply = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!cvFile) {
-      setError('Please upload your CV');
+    const cvError = validateCvFile(cvFile);
+    if (cvError) {
+      setError(cvError);
       return;
     }
 
@@ -70,6 +89,15 @@ const Apply = () => {
     } finally {
       setSubmitting(false);
     }
+  };
+
+  const handleCvChange = (e) => {
+    const file = e.target.files?.[0] || null;
+    const cvError = validateCvFile(file);
+
+    setCvFile(cvError ? null : file);
+    setError(cvError);
+    if (cvError) e.target.value = '';
   };
 
   const jobMeta = useMemo(() => {
@@ -242,7 +270,7 @@ const Apply = () => {
                 type="file"
                 accept=".pdf,.docx"
                 className={fileInputClassName}
-                onChange={(e) => setCvFile(e.target.files[0])}
+                onChange={handleCvChange}
                 disabled={closedForApplications}
                 required
               />
