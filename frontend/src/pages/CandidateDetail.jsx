@@ -119,6 +119,31 @@ const getAiInterviewResult = (candidate) => {
   return 'AI interview not started';
 };
 
+const getJobClosingDate = (candidate) => candidate?.job?.closingDate || candidate?.jobClosingDate || null;
+
+const isBeforeJobClosingDate = (candidate) => {
+  const closingDate = getJobClosingDate(candidate);
+  if (!closingDate) return false;
+
+  const closingTime = new Date(closingDate).getTime();
+  return Number.isFinite(closingTime) && Date.now() < closingTime;
+};
+
+const requiresOpenApplicationsWarning = (candidate, actionKey) => {
+  const normalizedStatus = String(candidate?.status || '').toUpperCase();
+  return (
+    normalizedStatus === 'AI_INTERVIEW_SCORED' &&
+    ['advance-to-human-interview', 'reject-interview'].includes(actionKey) &&
+    isBeforeJobClosingDate(candidate)
+  );
+};
+
+const getOpenApplicationsActionCopy = (actionKey) => {
+  if (actionKey === 'advance-to-human-interview') return 'Advance to Interview';
+  if (actionKey === 'reject-interview') return 'Reject Candidate';
+  return 'Continue';
+};
+
 const PIPELINE_STAGES = [
   {
     key: 'application',
@@ -497,6 +522,7 @@ const CandidateDetail = () => {
   const [showScheduleModal, setShowScheduleModal] = useState(false);
   const [scheduleData, setScheduleData] = useState({ date: '', time: '', location: '', meetingLink: '' });
   const [showAiAnalysisModal, setShowAiAnalysisModal] = useState(false);
+  const [pendingOpenApplicationsAction, setPendingOpenApplicationsAction] = useState('');
 
   useEffect(() => {
     loadData();
@@ -548,12 +574,7 @@ const CandidateDetail = () => {
     }
   };
 
-  const handleAction = async (actionKey) => {
-    if (actionKey === 'schedule-interview') {
-      setShowScheduleModal(true);
-      return;
-    }
-
+  const runCandidateAction = async (actionKey) => {
     setActionLoading(actionKey);
     setError('');
 
@@ -582,17 +603,43 @@ const CandidateDetail = () => {
           action = api.candidates.retry(id);
           break;
         default:
-          return;
+          return false;
       }
 
       await action;
       await loadData();
       setNote('');
       setShowScheduleModal(false);
+      return true;
     } catch (err) {
       setError(err.message);
+      return false;
     } finally {
       setActionLoading('');
+    }
+  };
+
+  const handleAction = async (actionKey) => {
+    if (actionKey === 'schedule-interview') {
+      setShowScheduleModal(true);
+      return;
+    }
+
+    if (requiresOpenApplicationsWarning(candidate, actionKey)) {
+      setPendingOpenApplicationsAction(actionKey);
+      return;
+    }
+
+    await runCandidateAction(actionKey);
+  };
+
+  const handleConfirmOpenApplicationsAction = async () => {
+    const actionKey = pendingOpenApplicationsAction;
+    if (!actionKey) return;
+
+    const didRun = await runCandidateAction(actionKey);
+    if (didRun) {
+      setPendingOpenApplicationsAction('');
     }
   };
 
@@ -1086,6 +1133,59 @@ const CandidateDetail = () => {
                   </button>
                 </div>
               </form>
+            </div>
+          </div>
+        )}
+
+        {pendingOpenApplicationsAction && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6"
+            onClick={() => setPendingOpenApplicationsAction('')}
+          >
+            <div
+              className="w-full max-w-md rounded-md border border-amber-200 bg-white p-6 shadow-xl sm:p-8"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="mb-5">
+                <p className="text-xs font-extrabold uppercase tracking-[0.18em] text-amber-700">
+                  Applications still open
+                </p>
+                <h2 className="app-section-title mt-2 text-2xl text-zinc-950">Ranking may change</h2>
+                <p className="mt-3 text-sm font-medium leading-6 text-zinc-600">
+                  Applications are still open
+                  {getJobClosingDate(candidate) ? ` until ${formatDate(getJobClosingDate(candidate))}` : ''}.
+                  Candidate rankings may change before the closing date.
+                </p>
+              </div>
+
+              <div className="rounded-md border border-amber-200 bg-amber-50 px-4 py-3 text-sm font-semibold leading-6 text-amber-900">
+                Are you sure you want to {getOpenApplicationsActionCopy(pendingOpenApplicationsAction).toLowerCase()} before the job closes?
+              </div>
+
+              <div className="mt-6 flex flex-wrap gap-3">
+                <button
+                  type="button"
+                  className={buttonSecondaryClassName}
+                  onClick={() => setPendingOpenApplicationsAction('')}
+                  disabled={actionLoading === pendingOpenApplicationsAction}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  className={
+                    pendingOpenApplicationsAction === 'reject-interview'
+                      ? buttonDangerClassName
+                      : buttonPrimaryClassName
+                  }
+                  onClick={handleConfirmOpenApplicationsAction}
+                  disabled={actionLoading === pendingOpenApplicationsAction}
+                >
+                  {actionLoading === pendingOpenApplicationsAction
+                    ? 'Processing...'
+                    : `${getOpenApplicationsActionCopy(pendingOpenApplicationsAction)} Anyway`}
+                </button>
+              </div>
             </div>
           </div>
         )}

@@ -511,7 +511,7 @@ export async function callLLM(messages: GLMMessage[], temperature = 0.5): Promis
       Authorization: `Bearer ${GLM_API_KEY}`,
     },
     body: JSON.stringify({
-      model: 'ilmu-glm-5.1',
+      model: 'llama-3.3-70b-versatile',
       messages,
       temperature,
     }),
